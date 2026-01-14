@@ -21,7 +21,7 @@
 - `index.ts` - entry point
 - `app.json` - Expo configuration
 - `contexts/` - React Context providers (TimerContext, SettingsContext)
-- `components/` - Reusable UI components (PresetButtons, CircularProgress, TimerControls, SettingsScreen, SettingsButton, SoundPicker)
+- `components/` - Reusable UI components (PresetButtons, CircularProgress, TimerControls, SettingsScreen, SettingsButton, SoundPicker, CompletionNotifier)
 
 ## Navigation
 - Simple state-based navigation using `useState<Screen>` in App.tsx

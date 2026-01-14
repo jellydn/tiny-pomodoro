@@ -13,6 +13,7 @@ Started: Wed Jan 14 13:39:11 +08 2026
 - Screen navigation: use `useState<Screen>` for simple navigation without a navigation library
 - Sound preview: use Web Audio API (AudioContext + Oscillator) for web, expo-av for native
 - Modal lists: use Modal + FlatList for selection pickers
+- Completion notifications: use invisible component (returns null) that listens to context state changes
 
 ---
 
@@ -134,4 +135,23 @@ Thread: https://ampcode.com/threads/T-019bbb19-4032-759d-8387-c1ef40624c6d
   - Different oscillator types (sine, triangle, square) create different tones
   - Modal with FlatList works well for selection lists in React Native
   - Sound picker should be disabled when parent sound toggle is off
+---
+
+## Wed Jan 14 2026 - US-008
+Thread: https://ampcode.com/threads/T-019bbb1d-9d3e-7357-bc3f-ad25a92c49ad
+- Added isCompleted state to TimerContext to track when timer finishes
+- Created CompletionNotifier component for sound/vibration notifications
+- Updated CircularProgress to show green color when timer completes
+- Sound plays via Web Audio API (web) when timer completes
+- Vibration triggers via React Native Vibration API (native) when timer completes
+- Typecheck passes
+- Files changed:
+  - Updated PomodoroTimer/contexts/TimerContext.tsx (added isCompleted state)
+  - Updated PomodoroTimer/components/CircularProgress.tsx (visual indication)
+  - Created PomodoroTimer/components/CompletionNotifier.tsx
+  - Updated PomodoroTimer/App.tsx (added CompletionNotifier)
+- **Learnings for future iterations:**
+  - Use useRef to track if notification already fired (prevents duplicate notifications)
+  - React Native Vibration.vibrate accepts pattern array: [delay, duration, delay, duration, ...]
+  - Visual completion indication: change progress circle to green (#4CAF50) with light green background (#C8E6C9)
 ---
