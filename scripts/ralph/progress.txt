@@ -16,6 +16,7 @@ Started: Wed Jan 14 13:39:11 +08 2026
 - Completion notifications: use invisible component (returns null) that listens to context state changes
 - Background timer: store end timestamp (endTimeRef), use AppState to detect foreground/background, calculate remaining on return
 - Background notifications: use expo-notifications with SchedulableTriggerInputTypes.TIME_INTERVAL
+- iOS widgets: use WidgetKit with SwiftUI, store state in App Groups for shared access, reload with NativeModules.WidgetCenter
 
 ---
 
