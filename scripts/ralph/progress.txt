@@ -1,3 +1,24 @@
 # Ralph Progress Log
 Started: Wed Jan 14 13:39:11 +08 2026
 ---
+
+## Codebase Patterns
+- Use Expo as the React Native framework (recommended approach)
+- Use `npx create-expo-app@latest <name> --template blank-typescript` for TypeScript projects
+- Typecheck: `npx tsc --noEmit` in PomodoroTimer directory
+- Run web dev: `npm run web` in PomodoroTimer directory
+
+---
+
+## Wed Jan 14 2026 - US-001
+Thread: https://ampcode.com/threads/T-019bbb03-ea4c-727c-a209-dd1d91c1396c
+- Initialized React Native project with Expo + TypeScript template
+- Added @react-native-async-storage/async-storage for local storage
+- Added react-native-svg for circular progress indicator
+- Typecheck passes successfully
+- Files changed: Created PomodoroTimer/ directory with full Expo project
+- **Learnings for future iterations:**
+  - React Native CLI init is deprecated; use Expo's create-expo-app instead
+  - The `blank-typescript` template provides TypeScript support out of the box
+  - AsyncStorage and react-native-svg install cleanly with npm
+---

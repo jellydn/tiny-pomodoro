@@ -1,0 +1,21 @@
+# PomodoroTimer AGENTS.md
+
+## Commands
+- **Typecheck**: `npx tsc --noEmit`
+- **Start dev server (web)**: `npm run web`
+- **Start dev server (iOS)**: `npm run ios`
+- **Start dev server (Android)**: `npm run android`
+
+## Framework
+- Built with Expo (React Native framework)
+- TypeScript is enabled by default
+
+## Key Dependencies
+- `@react-native-async-storage/async-storage` - for persistent settings storage
+- `react-native-svg` - for circular progress indicator
+- `expo-status-bar` - for status bar styling
+
+## Project Structure
+- `App.tsx` - main app component
+- `index.ts` - entry point
+- `app.json` - Expo configuration
