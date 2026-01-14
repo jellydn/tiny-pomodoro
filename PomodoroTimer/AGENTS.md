@@ -14,13 +14,14 @@
 - `@react-native-async-storage/async-storage` - for persistent settings storage
 - `react-native-svg` - for circular progress indicator
 - `expo-status-bar` - for status bar styling
+- `expo-av` - for audio playback (sound notifications)
 
 ## Project Structure
 - `App.tsx` - main app component
 - `index.ts` - entry point
 - `app.json` - Expo configuration
 - `contexts/` - React Context providers (TimerContext, SettingsContext)
-- `components/` - Reusable UI components (PresetButtons, CircularProgress, TimerControls, SettingsScreen, SettingsButton)
+- `components/` - Reusable UI components (PresetButtons, CircularProgress, TimerControls, SettingsScreen, SettingsButton, SoundPicker)
 
 ## Navigation
 - Simple state-based navigation using `useState<Screen>` in App.tsx

@@ -11,6 +11,8 @@ Started: Wed Jan 14 13:39:11 +08 2026
 - Component pattern: create reusable components in `components/` directory
 - Settings persistence: use AsyncStorage with JSON.stringify/parse for settings objects
 - Screen navigation: use `useState<Screen>` for simple navigation without a navigation library
+- Sound preview: use Web Audio API (AudioContext + Oscillator) for web, expo-av for native
+- Modal lists: use Modal + FlatList for selection pickers
 
 ---
 
@@ -109,4 +111,27 @@ Thread: https://ampcode.com/threads/T-019bbb16-a326-726a-b05c-60e9da1d5b4d
   - Simple screen navigation can be done with useState<Screen> without a navigation library
   - Use Switch component from react-native for toggle switches
   - Disable a toggle switch when toggling it would violate a constraint (e.g., both OFF)
+- Web Audio API: Use AudioContext with oscillator for sound preview on web platform
+- expo-av: Use for native audio playback (installed as dependency)
+---
+
+## Wed Jan 14 2026 - US-007
+Thread: https://ampcode.com/threads/T-019bbb19-4032-759d-8387-c1ef40624c6d
+- Created SoundPicker component with modal for sound selection
+- Added 5 sound options: Bell, Chime, Ding, Gong, Alert
+- Sound preview uses Web Audio API (oscillator tones) for web platform
+- Selected sound ID persists to AsyncStorage via SettingsContext
+- Sound picker is disabled when sound notifications are disabled
+- Updated SettingsContext with selectedSoundId state and AVAILABLE_SOUNDS export
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/components/SoundPicker.tsx
+  - Updated PomodoroTimer/contexts/SettingsContext.tsx
+  - Updated PomodoroTimer/components/SettingsScreen.tsx
+  - Added expo-av dependency to package.json
+- **Learnings for future iterations:**
+  - Web Audio API: AudioContext + Oscillator provides simple sound preview for web
+  - Different oscillator types (sine, triangle, square) create different tones
+  - Modal with FlatList works well for selection lists in React Native
+  - Sound picker should be disabled when parent sound toggle is off
 ---
