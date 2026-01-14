@@ -1,13 +1,20 @@
+import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { TimerProvider } from './contexts/TimerContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { PresetButtons } from './components/PresetButtons';
 import { CircularProgress } from './components/CircularProgress';
 import { TimerControls } from './components/TimerControls';
+import { SettingsButton } from './components/SettingsButton';
+import { SettingsScreen } from './components/SettingsScreen';
 
-function MainScreen() {
+type Screen = 'main' | 'settings';
+
+function MainScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   return (
     <View style={styles.container}>
+      <SettingsButton onPress={onOpenSettings} />
       <CircularProgress />
       <PresetButtons />
       <TimerControls />
@@ -16,11 +23,23 @@ function MainScreen() {
   );
 }
 
+function AppNavigator() {
+  const [currentScreen, setCurrentScreen] = useState<Screen>('main');
+
+  if (currentScreen === 'settings') {
+    return <SettingsScreen onBack={() => setCurrentScreen('main')} />;
+  }
+
+  return <MainScreen onOpenSettings={() => setCurrentScreen('settings')} />;
+}
+
 export default function App() {
   return (
-    <TimerProvider>
-      <MainScreen />
-    </TimerProvider>
+    <SettingsProvider>
+      <TimerProvider>
+        <AppNavigator />
+      </TimerProvider>
+    </SettingsProvider>
   );
 }
 
