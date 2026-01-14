@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { requestWidgetUpdate } from 'react-native-android-widget';
+import { saveTimerState, loadTimerState, computeRemainingFromState, type PersistedTimerState } from '../utils/timerStorage';
+import { PomodoroWidget } from '../widgets/PomodoroWidget';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -32,16 +35,41 @@ const DEFAULT_DURATION = 25 * 60;
 
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
+function updateWidget(remainingSeconds: number, durationSeconds: number, isRunning: boolean) {
+  if (Platform.OS !== 'android') return;
+  
+  requestWidgetUpdate({
+    widgetName: 'PomodoroWidget',
+    renderWidget: () => (
+      <PomodoroWidget
+        remainingSeconds={remainingSeconds}
+        durationSeconds={durationSeconds}
+        isRunning={isRunning}
+      />
+    ),
+  });
+}
+
 export function TimerProvider({ children }: { children: ReactNode }) {
   const [duration, setDurationState] = useState(DEFAULT_DURATION);
   const [remaining, setRemaining] = useState(DEFAULT_DURATION);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const endTimeRef = useRef<number | null>(null);
   const scheduledNotificationRef = useRef<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+  const persistState = useCallback((state: Omit<PersistedTimerState, 'updatedAt'>) => {
+    const fullState: PersistedTimerState = {
+      ...state,
+      updatedAt: Date.now(),
+    };
+    saveTimerState(fullState);
+    updateWidget(state.remaining, state.duration, state.isRunning);
+  }, []);
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -91,16 +119,33 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     endTimeRef.current = null;
     clearTimer();
     cancelScheduledNotification();
-  }, [clearTimer, cancelScheduledNotification]);
+    persistState({
+      duration: newDuration,
+      remaining: newDuration,
+      isRunning: false,
+      isPaused: false,
+      isCompleted: false,
+      endTimestamp: null,
+    });
+  }, [clearTimer, cancelScheduledNotification, persistState]);
 
   const start = useCallback(() => {
     if (remaining <= 0) return;
+    const endTimestamp = Date.now() + remaining * 1000;
     setIsRunning(true);
     setIsPaused(false);
     setIsCompleted(false);
-    endTimeRef.current = Date.now() + remaining * 1000;
+    endTimeRef.current = endTimestamp;
     scheduleCompletionNotification(remaining);
-  }, [remaining, scheduleCompletionNotification]);
+    persistState({
+      duration,
+      remaining,
+      isRunning: true,
+      isPaused: false,
+      isCompleted: false,
+      endTimestamp,
+    });
+  }, [remaining, duration, scheduleCompletionNotification, persistState]);
 
   const pause = useCallback(() => {
     setIsRunning(false);
@@ -108,7 +153,15 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     endTimeRef.current = null;
     clearTimer();
     cancelScheduledNotification();
-  }, [clearTimer, cancelScheduledNotification]);
+    persistState({
+      duration,
+      remaining,
+      isRunning: false,
+      isPaused: true,
+      isCompleted: false,
+      endTimestamp: null,
+    });
+  }, [duration, remaining, clearTimer, cancelScheduledNotification, persistState]);
 
   const stop = useCallback(() => {
     setIsRunning(false);
@@ -118,7 +171,15 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     endTimeRef.current = null;
     clearTimer();
     cancelScheduledNotification();
-  }, [duration, clearTimer, cancelScheduledNotification]);
+    persistState({
+      duration,
+      remaining: duration,
+      isRunning: false,
+      isPaused: false,
+      isCompleted: false,
+      endTimestamp: null,
+    });
+  }, [duration, clearTimer, cancelScheduledNotification, persistState]);
 
   const reset = useCallback(() => {
     setIsRunning(false);
@@ -128,7 +189,31 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     endTimeRef.current = null;
     clearTimer();
     cancelScheduledNotification();
-  }, [duration, clearTimer, cancelScheduledNotification]);
+    persistState({
+      duration,
+      remaining: duration,
+      isRunning: false,
+      isPaused: false,
+      isCompleted: false,
+      endTimestamp: null,
+    });
+  }, [duration, clearTimer, cancelScheduledNotification, persistState]);
+
+  useEffect(() => {
+    (async () => {
+      const storedState = await loadTimerState();
+      if (storedState) {
+        const computed = computeRemainingFromState(storedState);
+        setDurationState(storedState.duration ?? DEFAULT_DURATION);
+        setRemaining(computed.remaining);
+        setIsRunning(computed.isRunning);
+        setIsPaused(storedState.isPaused && !computed.isRunning);
+        setIsCompleted(computed.isCompleted);
+        endTimeRef.current = computed.endTimestamp;
+      }
+      setIsHydrated(true);
+    })();
+  }, []);
 
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
@@ -145,6 +230,14 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           setIsRunning(false);
           setIsCompleted(true);
           endTimeRef.current = null;
+          persistState({
+            duration,
+            remaining: 0,
+            isRunning: false,
+            isPaused: false,
+            isCompleted: true,
+            endTimestamp: null,
+          });
         } else {
           setRemaining(newRemaining);
         }
@@ -154,20 +247,33 @@ export function TimerProvider({ children }: { children: ReactNode }) {
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => subscription.remove();
-  }, []);
+  }, [duration, persistState]);
 
   useEffect(() => {
     if (isRunning && remaining > 0) {
       intervalRef.current = setInterval(() => {
         setRemaining((prev) => {
-          if (prev <= 1) {
+          const next = prev <= 1 ? 0 : prev - 1;
+          const endTimestamp = next > 0 ? Date.now() + next * 1000 : null;
+          
+          if (next === 0) {
             clearTimer();
             setIsRunning(false);
             setIsCompleted(true);
             endTimeRef.current = null;
-            return 0;
+            persistState({
+              duration,
+              remaining: 0,
+              isRunning: false,
+              isPaused: false,
+              isCompleted: true,
+              endTimestamp: null,
+            });
+          } else {
+            updateWidget(next, duration, true);
           }
-          return prev - 1;
+          
+          return next;
         });
       }, 1000);
     }
@@ -175,7 +281,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     return () => {
       clearTimer();
     };
-  }, [isRunning, clearTimer]);
+  }, [isRunning, clearTimer, duration, persistState]);
+
+  if (!isHydrated) {
+    return null;
+  }
 
   return (
     <TimerContext.Provider

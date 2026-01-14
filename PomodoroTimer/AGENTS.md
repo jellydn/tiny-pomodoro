@@ -27,3 +27,13 @@
 ## Navigation
 - Simple state-based navigation using `useState<Screen>` in App.tsx
 - No external navigation library needed for this simple app
+
+## Android Widget
+- Uses `react-native-android-widget` library for home screen widgets
+- Widget files: `widgets/PomodoroWidget.tsx` (UI) and `widgets/widgetTaskHandler.tsx` (logic)
+- Register widget in `index.ts` using `registerWidgetTaskHandler()`
+- Widget props: `remainingSeconds`, `durationSeconds`, `isRunning`
+- Use `clickAction` prop on FlexWidget for button interactions (e.g., `clickAction="PAUSE"`)
+- Update widget from app using `requestWidgetUpdate()` from `react-native-android-widget`
+- Widget state stored in AsyncStorage (`timerStorage.ts`) for cross-process access
+- Type fix: Use `widgetInfo.widgetName` in widgetTaskHandler (not direct `widgetName` property)
