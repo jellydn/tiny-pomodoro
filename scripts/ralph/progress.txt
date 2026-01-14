@@ -195,3 +195,31 @@ Thread: https://ampcode.com/threads/T-019bbb20-6fb0-76c5-9519-72068724d944
   - Widget state must be stored in AsyncStorage for cross-process access between app and widget
   - Use SvgWidget with SVG string for circular progress in Android widgets
   - FlexWidget clickAction prop enables button interactions (e.g., clickAction="PAUSE")
+
+## Wed Jan 14 2026 - US-011
+Thread: https://ampcode.com/threads/T-019bbb23-7c5e-7c4e-8db5-bb9ad4c7c7d2
+- Created iOS WidgetKit widget extension for Pomodoro Timer lock screen widget
+- Widget displays remaining time with circular progress indicator
+- Widget supports pause/resume control via button tap
+- Widget updates in real-time using timeline provider
+- Updated timer storage to use App Groups for shared state between app and widget
+- Added widget reload utility for iOS timeline updates
+- Updated TimerContext to reload iOS widget timelines on state changes
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/ios/PomodoroTimerWidget/PomodoroTimerWidget.swift (Swift widget bundle with provider and SwiftUI view)
+  - Created PomodoroTimer/ios/PomodoroTimerWidget/Info.plist (widget extension config)
+  - Created PomodoroTimer/ios/PomodoroTimerWidget/PomodoroTimerWidget.entitlements (App Groups)
+  - Updated PomodoroTimer/utils/timerStorage.ts (App Groups support for iOS)
+  - Created PomodoroTimer/utils/widgetReload.ts (widget reload utility)
+  - Updated PomodoroTimer/contexts/TimerContext.tsx (iOS widget reload)
+  - Updated PomodoroTimer/AGENTS.md (added iOS Widget section)
+- **Learnings for future iterations:**
+  - iOS widgets require separate Swift files in a widget extension directory
+  - Use App Groups to share state between main app and widget extension
+  - WidgetCenter native module requires declaration for TypeScript: `NativeModules.WidgetCenter.reloadAllTimelines()`
+  - iOS widgets use StaticConfiguration with TimelineProvider for real-time updates
+  - Widget state must be persisted to shared App Group for widget to read when app is backgrounded
+  - Widget timeline reload triggers the widget to refresh its display
+  - Swift @main attribute marks the widget bundle entry point
+

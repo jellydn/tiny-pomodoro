@@ -1,6 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 export const TIMER_STATE_KEY = 'pomodoro_timer_state_v1';
+export const APP_GROUP_ID = 'group.com.pomodorotimer.shared';
+
+function getStorageLocation(): string | null {
+  if (Platform.OS === 'ios') {
+    return APP_GROUP_ID;
+  }
+  return null;
+}
 
 export type PersistedTimerState = {
   duration: number;
@@ -14,15 +23,27 @@ export type PersistedTimerState = {
 
 export async function saveTimerState(state: PersistedTimerState): Promise<void> {
   try {
-    await AsyncStorage.setItem(TIMER_STATE_KEY, JSON.stringify(state));
+    const storageLocation = getStorageLocation();
+    if (storageLocation) {
+      await AsyncStorage.setItem(`${storageLocation}:${TIMER_STATE_KEY}`, JSON.stringify(state));
+    } else {
+      await AsyncStorage.setItem(TIMER_STATE_KEY, JSON.stringify(state));
+    }
   } catch {
-    // Swallow errors for now
   }
 }
 
 export async function loadTimerState(): Promise<PersistedTimerState | null> {
   try {
-    const raw = await AsyncStorage.getItem(TIMER_STATE_KEY);
+    const storageLocation = getStorageLocation();
+    let raw: string | null = null;
+
+    if (storageLocation) {
+      raw = await AsyncStorage.getItem(`${storageLocation}:${TIMER_STATE_KEY}`);
+    } else {
+      raw = await AsyncStorage.getItem(TIMER_STATE_KEY);
+    }
+
     if (!raw) return null;
     return JSON.parse(raw) as PersistedTimerState;
   } catch {

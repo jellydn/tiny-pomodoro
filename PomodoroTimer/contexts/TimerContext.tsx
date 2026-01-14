@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import { saveTimerState, loadTimerState, computeRemainingFromState, type PersistedTimerState } from '../utils/timerStorage';
 import { PomodoroWidget } from '../widgets/PomodoroWidget';
+import { reloadWidgetTimelines } from '../utils/widgetReload';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -36,18 +37,20 @@ const DEFAULT_DURATION = 25 * 60;
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
 function updateWidget(remainingSeconds: number, durationSeconds: number, isRunning: boolean) {
-  if (Platform.OS !== 'android') return;
-  
-  requestWidgetUpdate({
-    widgetName: 'PomodoroWidget',
-    renderWidget: () => (
-      <PomodoroWidget
-        remainingSeconds={remainingSeconds}
-        durationSeconds={durationSeconds}
-        isRunning={isRunning}
-      />
-    ),
-  });
+  if (Platform.OS === 'android') {
+    requestWidgetUpdate({
+      widgetName: 'PomodoroWidget',
+      renderWidget: () => (
+        <PomodoroWidget
+          remainingSeconds={remainingSeconds}
+          durationSeconds={durationSeconds}
+          isRunning={isRunning}
+        />
+      ),
+    });
+  } else if (Platform.OS === 'ios') {
+    reloadWidgetTimelines();
+  }
 }
 
 export function TimerProvider({ children }: { children: ReactNode }) {
