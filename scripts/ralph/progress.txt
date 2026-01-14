@@ -176,3 +176,22 @@ Thread: https://ampcode.com/threads/T-019bbb20-6fb0-76c5-9519-72068724d944
   - Use SchedulableTriggerInputTypes.TIME_INTERVAL for scheduling notifications by seconds
   - Platform.OS === 'web' check skips native-only notification scheduling
 ---
+
+## Wed Jan 14 2026 - US-010
+- Fixed TypeScript error in widgetTaskHandler.tsx: use `widgetInfo.widgetName` instead of `widgetName`
+- Android widget properly displays remaining time with circular progress indicator
+- Widget has pause/resume button with clickAction handling
+- Widget updates every second via TimerContext calling requestWidgetUpdate()
+- Typecheck passes
+- Files changed:
+  - Updated PomodoroTimer/widgets/widgetTaskHandler.tsx (type fix)
+  - Updated PomodoroTimer/AGENTS.md (added Android Widget section)
+  - Created PomodoroTimer/widgets/PomodoroWidget.tsx (UI component)
+  - Created PomodoroTimer/widgets/widgetTaskHandler.tsx (logic handler)
+  - Created PomodoroTimer/utils/timerStorage.ts (state persistence)
+- **Learnings for future iterations:**
+  - react-native-android-widget: WidgetTaskHandlerProps has `widgetInfo` (object with widgetName), not direct `widgetName` property
+  - Widget must be registered in index.ts using `registerWidgetTaskHandler()`
+  - Widget state must be stored in AsyncStorage for cross-process access between app and widget
+  - Use SvgWidget with SVG string for circular progress in Android widgets
+  - FlexWidget clickAction prop enables button interactions (e.g., clickAction="PAUSE")
