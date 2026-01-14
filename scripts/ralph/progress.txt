@@ -73,3 +73,18 @@ Thread: https://ampcode.com/threads/T-019bbb0b-1c5d-72fa-82e4-4d2c73883018
   - Rotation of -90 degrees starts progress from top (12 o'clock position)
   - Calculate circumference as 2 * PI * radius for strokeDasharray
 ---
+
+## Wed Jan 14 2026 - US-005
+Thread: https://ampcode.com/threads/T-019bbb14-90de-7659-9cac-08c3e98028bf
+- Created TimerControls component with Start/Pause toggle and Stop button
+- Start/Pause is a single button that changes label based on timer state (Start → Pause → Resume)
+- Stop button resets timer to selected duration
+- Browser verified: all controls work correctly
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/components/TimerControls.tsx
+  - Updated PomodoroTimer/App.tsx to include TimerControls
+- **Learnings for future iterations:**
+  - Use isRunning and isPaused from TimerContext to determine button label
+  - isPaused state distinguishes between "not started" (Start) and "paused" (Resume)
+---

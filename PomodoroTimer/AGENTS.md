@@ -20,4 +20,4 @@
 - `index.ts` - entry point
 - `app.json` - Expo configuration
 - `contexts/` - React Context providers (TimerContext)
-- `components/` - Reusable UI components (PresetButtons)
+- `components/` - Reusable UI components (PresetButtons, CircularProgress, TimerControls)
