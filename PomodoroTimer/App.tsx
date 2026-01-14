@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { TimerProvider, useTimer } from './contexts/TimerContext';
+import { PresetButtons } from './components/PresetButtons';
 
 function TimerDisplay() {
   const { remaining, isRunning, isPaused } = useTimer();
@@ -18,13 +19,20 @@ function TimerDisplay() {
   );
 }
 
+function MainScreen() {
+  return (
+    <View style={styles.container}>
+      <TimerDisplay />
+      <PresetButtons />
+      <StatusBar style="auto" />
+    </View>
+  );
+}
+
 export default function App() {
   return (
     <TimerProvider>
-      <View style={styles.container}>
-        <TimerDisplay />
-        <StatusBar style="auto" />
-      </View>
+      <MainScreen />
     </TimerProvider>
   );
 }
