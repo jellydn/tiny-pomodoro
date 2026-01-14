@@ -57,3 +57,19 @@ Thread: https://ampcode.com/threads/T-019bbb08-34be-7429-a3d9-a6898c221509
   - Use TouchableOpacity for interactive buttons in React Native
   - Disable preset buttons while timer is running to prevent mid-session changes
 ---
+
+## Wed Jan 14 2026 - US-004
+Thread: https://ampcode.com/threads/T-019bbb0b-1c5d-72fa-82e4-4d2c73883018
+- Created CircularProgress component using react-native-svg
+- Progress depletes clockwise as timer runs (using strokeDashoffset)
+- Digital time display in MM:SS format centered in the circle
+- Replaced simple TimerDisplay with CircularProgress in App.tsx
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/components/CircularProgress.tsx
+  - Updated PomodoroTimer/App.tsx
+- **Learnings for future iterations:**
+  - Use SVG Circle with strokeDasharray/strokeDashoffset for progress rings
+  - Rotation of -90 degrees starts progress from top (12 o'clock position)
+  - Calculate circumference as 2 * PI * radius for strokeDasharray
+---

@@ -3,12 +3,14 @@ import { StyleSheet, View } from 'react-native';
 import { TimerProvider } from './contexts/TimerContext';
 import { PresetButtons } from './components/PresetButtons';
 import { CircularProgress } from './components/CircularProgress';
+import { TimerControls } from './components/TimerControls';
 
 function MainScreen() {
   return (
     <View style={styles.container}>
       <CircularProgress />
       <PresetButtons />
+      <TimerControls />
       <StatusBar style="auto" />
     </View>
   );
