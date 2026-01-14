@@ -15,6 +15,7 @@
 - `react-native-svg` - for circular progress indicator
 - `expo-status-bar` - for status bar styling
 - `expo-av` - for audio playback (sound notifications)
+- `expo-notifications` - for background/scheduled notifications
 
 ## Project Structure
 - `App.tsx` - main app component

@@ -14,6 +14,8 @@ Started: Wed Jan 14 13:39:11 +08 2026
 - Sound preview: use Web Audio API (AudioContext + Oscillator) for web, expo-av for native
 - Modal lists: use Modal + FlatList for selection pickers
 - Completion notifications: use invisible component (returns null) that listens to context state changes
+- Background timer: store end timestamp (endTimeRef), use AppState to detect foreground/background, calculate remaining on return
+- Background notifications: use expo-notifications with SchedulableTriggerInputTypes.TIME_INTERVAL
 
 ---
 
@@ -154,4 +156,23 @@ Thread: https://ampcode.com/threads/T-019bbb1d-9d3e-7357-bc3f-ad25a92c49ad
   - Use useRef to track if notification already fired (prevents duplicate notifications)
   - React Native Vibration.vibrate accepts pattern array: [delay, duration, delay, duration, ...]
   - Visual completion indication: change progress circle to green (#4CAF50) with light green background (#C8E6C9)
+---
+
+## Wed Jan 14 2026 - US-009
+Thread: https://ampcode.com/threads/T-019bbb20-6fb0-76c5-9519-72068724d944
+- Implemented background timer operation using AppState and endTimeRef
+- Store end timestamp (endTimeRef) when timer starts, calculate remaining on foreground return
+- Added expo-notifications for background completion notifications
+- Scheduled notifications fire when app is backgrounded
+- Cancels scheduled notifications on pause/stop/reset
+- Typecheck passes
+- Files changed:
+  - Updated PomodoroTimer/contexts/TimerContext.tsx (AppState handling, expo-notifications)
+  - Added expo-notifications dependency to package.json
+- **Learnings for future iterations:**
+  - Use AppState.addEventListener('change') to detect foreground/background transitions
+  - Store absolute end timestamp (Date.now() + remaining * 1000) rather than relative time for accurate background calculation
+  - expo-notifications requires shouldShowBanner and shouldShowList in notification handler for TypeScript
+  - Use SchedulableTriggerInputTypes.TIME_INTERVAL for scheduling notifications by seconds
+  - Platform.OS === 'web' check skips native-only notification scheduling
 ---
