@@ -9,6 +9,8 @@ Started: Wed Jan 14 13:39:11 +08 2026
 - Run web dev: `npm run web` in PomodoroTimer directory (requires react-dom and react-native-web)
 - Context pattern: create contexts in `contexts/` directory, export Provider and useX hook together
 - Component pattern: create reusable components in `components/` directory
+- Settings persistence: use AsyncStorage with JSON.stringify/parse for settings objects
+- Screen navigation: use `useState<Screen>` for simple navigation without a navigation library
 
 ---
 
@@ -87,4 +89,24 @@ Thread: https://ampcode.com/threads/T-019bbb14-90de-7659-9cac-08c3e98028bf
 - **Learnings for future iterations:**
   - Use isRunning and isPaused from TimerContext to determine button label
   - isPaused state distinguishes between "not started" (Start) and "paused" (Resume)
+---
+
+## Wed Jan 14 2026 - US-006
+Thread: https://ampcode.com/threads/T-019bbb16-a326-726a-b05c-60e9da1d5b4d
+- Created SettingsContext with soundEnabled/vibrationEnabled state + AsyncStorage persistence
+- Created SettingsScreen component with toggle switches for Sound and Vibration
+- Created SettingsButton (gear icon) for navigation from main screen
+- Updated App.tsx with simple state-based screen navigation
+- Logic prevents both toggles from being OFF (at least one must be enabled)
+- Settings load from AsyncStorage on app start
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/contexts/SettingsContext.tsx
+  - Created PomodoroTimer/components/SettingsScreen.tsx
+  - Created PomodoroTimer/components/SettingsButton.tsx
+  - Updated PomodoroTimer/App.tsx
+- **Learnings for future iterations:**
+  - Simple screen navigation can be done with useState<Screen> without a navigation library
+  - Use Switch component from react-native for toggle switches
+  - Disable a toggle switch when toggling it would violate a constraint (e.g., both OFF)
 ---

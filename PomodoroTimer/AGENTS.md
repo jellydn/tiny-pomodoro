@@ -19,5 +19,9 @@
 - `App.tsx` - main app component
 - `index.ts` - entry point
 - `app.json` - Expo configuration
-- `contexts/` - React Context providers (TimerContext)
-- `components/` - Reusable UI components (PresetButtons, CircularProgress, TimerControls)
+- `contexts/` - React Context providers (TimerContext, SettingsContext)
+- `components/` - Reusable UI components (PresetButtons, CircularProgress, TimerControls, SettingsScreen, SettingsButton)
+
+## Navigation
+- Simple state-based navigation using `useState<Screen>` in App.tsx
+- No external navigation library needed for this simple app
