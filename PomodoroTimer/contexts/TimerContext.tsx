@@ -5,6 +5,7 @@ interface TimerState {
   remaining: number;
   isRunning: boolean;
   isPaused: boolean;
+  isCompleted: boolean;
 }
 
 interface TimerContextType extends TimerState {
@@ -24,6 +25,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const [remaining, setRemaining] = useState(DEFAULT_DURATION);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearTimer = useCallback(() => {
@@ -38,6 +40,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setRemaining(newDuration);
     setIsRunning(false);
     setIsPaused(false);
+    setIsCompleted(false);
     clearTimer();
   }, [clearTimer]);
 
@@ -45,6 +48,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     if (remaining <= 0) return;
     setIsRunning(true);
     setIsPaused(false);
+    setIsCompleted(false);
   }, [remaining]);
 
   const pause = useCallback(() => {
@@ -56,6 +60,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const stop = useCallback(() => {
     setIsRunning(false);
     setIsPaused(false);
+    setIsCompleted(false);
     setRemaining(duration);
     clearTimer();
   }, [duration, clearTimer]);
@@ -63,6 +68,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const reset = useCallback(() => {
     setIsRunning(false);
     setIsPaused(false);
+    setIsCompleted(false);
     setRemaining(duration);
     clearTimer();
   }, [duration, clearTimer]);
@@ -74,6 +80,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           if (prev <= 1) {
             clearTimer();
             setIsRunning(false);
+            setIsCompleted(true);
             return 0;
           }
           return prev - 1;
@@ -86,12 +93,6 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     };
   }, [isRunning, clearTimer]);
 
-  useEffect(() => {
-    if (remaining <= 0 && isRunning) {
-      setIsRunning(false);
-    }
-  }, [remaining, isRunning]);
-
   return (
     <TimerContext.Provider
       value={{
@@ -99,6 +100,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         remaining,
         isRunning,
         isPaused,
+        isCompleted,
         setDuration,
         start,
         pause,

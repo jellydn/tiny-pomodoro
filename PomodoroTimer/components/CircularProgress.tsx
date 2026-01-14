@@ -9,7 +9,7 @@ const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function CircularProgress() {
-  const { duration, remaining } = useTimer();
+  const { duration, remaining, isCompleted } = useTimer();
 
   const progress = duration > 0 ? remaining / duration : 1;
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
@@ -18,6 +18,10 @@ export function CircularProgress() {
   const seconds = remaining % 60;
   const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
+  const progressColor = isCompleted ? '#4CAF50' : '#007AFF';
+  const backgroundColor = isCompleted ? '#C8E6C9' : '#E0E0E0';
+  const textColor = isCompleted ? '#4CAF50' : '#333';
+
   return (
     <View style={styles.container}>
       <Svg width={SIZE} height={SIZE} style={styles.svg}>
@@ -25,7 +29,7 @@ export function CircularProgress() {
           cx={SIZE / 2}
           cy={SIZE / 2}
           r={RADIUS}
-          stroke="#E0E0E0"
+          stroke={backgroundColor}
           strokeWidth={STROKE_WIDTH}
           fill="transparent"
         />
@@ -33,7 +37,7 @@ export function CircularProgress() {
           cx={SIZE / 2}
           cy={SIZE / 2}
           r={RADIUS}
-          stroke="#007AFF"
+          stroke={progressColor}
           strokeWidth={STROKE_WIDTH}
           fill="transparent"
           strokeDasharray={CIRCUMFERENCE}
@@ -44,7 +48,7 @@ export function CircularProgress() {
         />
       </Svg>
       <View style={styles.timeContainer}>
-        <Text style={styles.timeText}>{timeString}</Text>
+        <Text style={[styles.timeText, { color: textColor }]}>{timeString}</Text>
       </View>
     </View>
   );

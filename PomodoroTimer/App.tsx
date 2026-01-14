@@ -8,6 +8,7 @@ import { CircularProgress } from './components/CircularProgress';
 import { TimerControls } from './components/TimerControls';
 import { SettingsButton } from './components/SettingsButton';
 import { SettingsScreen } from './components/SettingsScreen';
+import { CompletionNotifier } from './components/CompletionNotifier';
 
 type Screen = 'main' | 'settings';
 
@@ -37,6 +38,7 @@ export default function App() {
   return (
     <SettingsProvider>
       <TimerProvider>
+        <CompletionNotifier />
         <AppNavigator />
       </TimerProvider>
     </SettingsProvider>
