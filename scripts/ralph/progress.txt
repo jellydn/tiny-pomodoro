@@ -6,8 +6,9 @@ Started: Wed Jan 14 13:39:11 +08 2026
 - Use Expo as the React Native framework (recommended approach)
 - Use `npx create-expo-app@latest <name> --template blank-typescript` for TypeScript projects
 - Typecheck: `npx tsc --noEmit` in PomodoroTimer directory
-- Run web dev: `npm run web` in PomodoroTimer directory
+- Run web dev: `npm run web` in PomodoroTimer directory (requires react-dom and react-native-web)
 - Context pattern: create contexts in `contexts/` directory, export Provider and useX hook together
+- Component pattern: create reusable components in `components/` directory
 
 ---
 
@@ -37,4 +38,22 @@ Thread: https://ampcode.com/threads/T-019bbb06-4ed7-779d-97ea-bf56c82ed79b
   - Use useRef to store interval ID for proper cleanup
   - Context pattern: export both Provider component and useTimer hook
   - Clear interval when component unmounts or timer state changes
+---
+
+## Wed Jan 14 2026 - US-003
+Thread: https://ampcode.com/threads/T-019bbb08-34be-7429-a3d9-a6898c221509
+- Created PresetButtons component with 4 preset durations (25, 30, 45, 50 minutes)
+- Selected preset is visually highlighted with blue background (#007AFF)
+- Tapping a preset updates timer display immediately via setDuration
+- Default selection is 25 minutes (matches DEFAULT_DURATION in TimerContext)
+- Disabled preset buttons while timer is running
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/components/PresetButtons.tsx
+  - Updated PomodoroTimer/App.tsx to include PresetButtons and extracted MainScreen component
+- **Learnings for future iterations:**
+  - Components go in `components/` directory
+  - Web dev requires additional deps: react-dom and react-native-web (install with `npx expo install`)
+  - Use TouchableOpacity for interactive buttons in React Native
+  - Disable preset buttons while timer is running to prevent mid-session changes
 ---
