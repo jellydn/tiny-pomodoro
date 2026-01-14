@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { useSettings } from '../contexts/SettingsContext';
+import { SoundPicker } from './SoundPicker';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -38,6 +39,8 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
             thumbColor={soundEnabled ? '#007AFF' : '#f4f3f4'}
           />
         </View>
+
+        <SoundPicker />
 
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
