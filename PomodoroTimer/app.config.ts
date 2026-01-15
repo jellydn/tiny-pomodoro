@@ -1,8 +1,8 @@
 import type { ExpoConfig } from 'expo/config';
 
 const config: ExpoConfig = {
-  name: 'PomodoroTimer',
-  slug: 'PomodoroTimer',
+  name: 'Tiny Pomodoro',
+  slug: 'tiny-pomodoro',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',

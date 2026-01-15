@@ -1,0 +1,29 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Safe zone: center 66% for Android adaptive icon -->
+  <!-- Layer 1: Background (will be colored by system) -->
+  <rect width="1024" height="1024" fill="#E53935"/>
+
+  <!-- Main content within safe zone (center 66%) -->
+  <g transform="translate(512, 512)">
+    <!-- Tomato body -->
+    <ellipse cx="0" cy="40" r="180" fill="#FF5252"/>
+    <ellipse cx="0" cy="20" r="180" fill="#FF6B6B"/>
+
+    <!-- Tomato highlight -->
+    <ellipse cx="-60" cy="-40" r="50" fill="#FF8A80" opacity="0.6"/>
+
+    <!-- Stem -->
+    <path d="M0 -130 L0 -90" stroke="#4CAF50" stroke-width="14" stroke-linecap="round"/>
+    <path d="M-25 -115 L25 -115" stroke="#4CAF50" stroke-width="11" stroke-linecap="round"/>
+    <path d="M-18 -125 L18 -125" stroke="#66BB6A" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Sepals -->
+    <path d="M0 -95 Q-50 -120 -80 -95 Q-50 -70 0 -95" fill="#4CAF50"/>
+    <path d="M0 -95 Q50 -120 80 -95 Q50 -70 0 -95" fill="#4CAF50"/>
+    <path d="M0 -95 Q-20 -130 0 -145 Q20 -130 0 -95" fill="#66BB6A"/>
+
+    <!-- Timer display -->
+    <rect x="-100" y="0" width="200" height="85" rx="12" fill="#FFFFFF"/>
+    <text x="0" y="60" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#C62828" text-anchor="middle">25:00</text>
+  </g>
+</svg>

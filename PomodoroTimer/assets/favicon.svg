@@ -1,0 +1,28 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <circle cx="96" cy="96" r="96" fill="#E53935"/>
+
+  <!-- Tomato body -->
+  <ellipse cx="96" cy="108" rx="52" ry="48" fill="#FF5252"/>
+  <ellipse cx="96" cy="104" rx="52" ry="48" fill="#FF6B6B"/>
+
+  <!-- Highlight -->
+  <ellipse cx="76" cy="84" rx="16" ry="12" fill="#FF8A80" opacity="0.6"/>
+
+  <!-- Stem -->
+  <path d="M96 62 L96 78" stroke="#4CAF50" stroke-width="4" stroke-linecap="round"/>
+  <path d="M88 68 L104 68" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Sepals -->
+  <path d="M96 72 Q80 64 68 72 Q80 80 96 72" fill="#4CAF50"/>
+  <path d="M96 72 Q112 64 124 72 Q112 80 96 72" fill="#4CAF50"/>
+  <path d="M96 72 Q90 56 96 50 Q102 56 96 72" fill="#66BB6A"/>
+
+  <!-- Timer display -->
+  <rect x="70" y="88" width="52" height="22" rx="3" fill="#FFFFFF"/>
+  <rect x="74" y="96" width="8" height="10" fill="#C62828"/>
+  <rect x="84" y="96" width="8" height="10" fill="#C62828"/>
+  <rect x="94" y="96" width="4" height="10" fill="#C62828"/>
+  <rect x="100" y="96" width="8" height="10" fill="#C62828"/>
+  <rect x="110" y="96" width="8" height="10" fill="#C62828"/>
+</svg>

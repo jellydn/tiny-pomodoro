@@ -1,0 +1,35 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="512" fill="#E53935"/>
+
+  <!-- Tomato shadow -->
+  <ellipse cx="512" cy="680" rx="320" ry="40" fill="#C62828" opacity="0.3"/>
+
+  <!-- Main tomato body -->
+  <ellipse cx="512" cy="560" rx="280" ry="260" fill="#FF5252"/>
+  <ellipse cx="512" cy="520" rx="280" ry="260" fill="#FF6B6B"/>
+
+  <!-- Tomato highlight -->
+  <ellipse cx="380" cy="420" rx="80" ry="60" fill="#FF8A80" opacity="0.6"/>
+
+  <!-- Stem -->
+  <path d="M512 280 L512 340" stroke="#4CAF50" stroke-width="20" stroke-linecap="round"/>
+  <path d="M480 300 L544 300" stroke="#4CAF50" stroke-width="16" stroke-linecap="round"/>
+  <path d="M492 285 L532 285" stroke="#66BB6A" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Sepals (green leaves at top) -->
+  <path d="M512 320 Q440 280 400 320 Q440 360 512 320" fill="#4CAF50"/>
+  <path d="M512 320 Q580 280 620 320 Q580 360 512 320" fill="#4CAF50"/>
+  <path d="M512 320 Q480 260 512 240 Q540 260 512 320" fill="#66BB6A"/>
+
+  <!-- Timer display -->
+  <rect x="372" y="452" width="280" height="120" rx="16" fill="#FFFFFF"/>
+  <text x="512" y="540" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#C62828" text-anchor="middle">25:00</text>
+
+  <!-- Clock ticks -->
+  <circle cx="512" cy="512" r="145" stroke="#FFFFFF" stroke-width="6" fill="none" opacity="0.3"/>
+  <circle cx="512" cy="367" r="8" fill="#FFFFFF"/>
+  <circle cx="657" cy="512" r="8" fill="#FFFFFF"/>
+  <circle cx="512" cy="657" r="8" fill="#FFFFFF"/>
+  <circle cx="367" cy="512" r="8" fill="#FFFFFF"/>
+</svg>
