@@ -15,6 +15,10 @@ const config: ExpoConfig = {
   },
   ios: {
     supportsTablet: true,
+    bundleIdentifier: 'com.pomodorotimer.app',
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     package: 'com.pomodorotimer.app',
@@ -27,6 +31,11 @@ const config: ExpoConfig = {
   },
   web: {
     favicon: './assets/favicon.png',
+  },
+  extra: {
+    eas: {
+      projectId: '6850ae80-bbde-4a62-9c45-cba7071478a6',
+    },
   },
   plugins: [
     [
