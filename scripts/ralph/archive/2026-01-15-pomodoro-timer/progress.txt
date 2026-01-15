@@ -1,0 +1,226 @@
+# Ralph Progress Log
+Started: Wed Jan 14 13:39:11 +08 2026
+---
+
+## Codebase Patterns
+- Use Expo as the React Native framework (recommended approach)
+- Use `npx create-expo-app@latest <name> --template blank-typescript` for TypeScript projects
+- Typecheck: `npx tsc --noEmit` in PomodoroTimer directory
+- Run web dev: `npm run web` in PomodoroTimer directory (requires react-dom and react-native-web)
+- Context pattern: create contexts in `contexts/` directory, export Provider and useX hook together
+- Component pattern: create reusable components in `components/` directory
+- Settings persistence: use AsyncStorage with JSON.stringify/parse for settings objects
+- Screen navigation: use `useState<Screen>` for simple navigation without a navigation library
+- Sound preview: use Web Audio API (AudioContext + Oscillator) for web, expo-av for native
+- Modal lists: use Modal + FlatList for selection pickers
+- Completion notifications: use invisible component (returns null) that listens to context state changes
+- Background timer: store end timestamp (endTimeRef), use AppState to detect foreground/background, calculate remaining on return
+- Background notifications: use expo-notifications with SchedulableTriggerInputTypes.TIME_INTERVAL
+- iOS widgets: use WidgetKit with SwiftUI, store state in App Groups for shared access, reload with NativeModules.WidgetCenter
+
+---
+
+## Wed Jan 14 2026 - US-001
+Thread: https://ampcode.com/threads/T-019bbb03-ea4c-727c-a209-dd1d91c1396c
+- Initialized React Native project with Expo + TypeScript template
+- Added @react-native-async-storage/async-storage for local storage
+- Added react-native-svg for circular progress indicator
+- Typecheck passes successfully
+- Files changed: Created PomodoroTimer/ directory with full Expo project
+- **Learnings for future iterations:**
+  - React Native CLI init is deprecated; use Expo's create-expo-app instead
+  - The `blank-typescript` template provides TypeScript support out of the box
+  - AsyncStorage and react-native-svg install cleanly with npm
+---
+
+## Wed Jan 14 2026 - US-002
+Thread: https://ampcode.com/threads/T-019bbb06-4ed7-779d-97ea-bf56c82ed79b
+- Created TimerContext with state: duration, remaining, isRunning, isPaused
+- Implemented setDuration, start, pause, stop, reset actions
+- Timer decrements remaining time every second using setInterval
+- Typecheck passes
+- Files changed: 
+  - Created PomodoroTimer/contexts/TimerContext.tsx
+  - Updated PomodoroTimer/App.tsx to use TimerProvider
+- **Learnings for future iterations:**
+  - Use useRef to store interval ID for proper cleanup
+  - Context pattern: export both Provider component and useTimer hook
+  - Clear interval when component unmounts or timer state changes
+---
+
+## Wed Jan 14 2026 - US-003
+Thread: https://ampcode.com/threads/T-019bbb08-34be-7429-a3d9-a6898c221509
+- Created PresetButtons component with 4 preset durations (25, 30, 45, 50 minutes)
+- Selected preset is visually highlighted with blue background (#007AFF)
+- Tapping a preset updates timer display immediately via setDuration
+- Default selection is 25 minutes (matches DEFAULT_DURATION in TimerContext)
+- Disabled preset buttons while timer is running
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/components/PresetButtons.tsx
+  - Updated PomodoroTimer/App.tsx to include PresetButtons and extracted MainScreen component
+- **Learnings for future iterations:**
+  - Components go in `components/` directory
+  - Web dev requires additional deps: react-dom and react-native-web (install with `npx expo install`)
+  - Use TouchableOpacity for interactive buttons in React Native
+  - Disable preset buttons while timer is running to prevent mid-session changes
+---
+
+## Wed Jan 14 2026 - US-004
+Thread: https://ampcode.com/threads/T-019bbb0b-1c5d-72fa-82e4-4d2c73883018
+- Created CircularProgress component using react-native-svg
+- Progress depletes clockwise as timer runs (using strokeDashoffset)
+- Digital time display in MM:SS format centered in the circle
+- Replaced simple TimerDisplay with CircularProgress in App.tsx
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/components/CircularProgress.tsx
+  - Updated PomodoroTimer/App.tsx
+- **Learnings for future iterations:**
+  - Use SVG Circle with strokeDasharray/strokeDashoffset for progress rings
+  - Rotation of -90 degrees starts progress from top (12 o'clock position)
+  - Calculate circumference as 2 * PI * radius for strokeDasharray
+---
+
+## Wed Jan 14 2026 - US-005
+Thread: https://ampcode.com/threads/T-019bbb14-90de-7659-9cac-08c3e98028bf
+- Created TimerControls component with Start/Pause toggle and Stop button
+- Start/Pause is a single button that changes label based on timer state (Start → Pause → Resume)
+- Stop button resets timer to selected duration
+- Browser verified: all controls work correctly
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/components/TimerControls.tsx
+  - Updated PomodoroTimer/App.tsx to include TimerControls
+- **Learnings for future iterations:**
+  - Use isRunning and isPaused from TimerContext to determine button label
+  - isPaused state distinguishes between "not started" (Start) and "paused" (Resume)
+---
+
+## Wed Jan 14 2026 - US-006
+Thread: https://ampcode.com/threads/T-019bbb16-a326-726a-b05c-60e9da1d5b4d
+- Created SettingsContext with soundEnabled/vibrationEnabled state + AsyncStorage persistence
+- Created SettingsScreen component with toggle switches for Sound and Vibration
+- Created SettingsButton (gear icon) for navigation from main screen
+- Updated App.tsx with simple state-based screen navigation
+- Logic prevents both toggles from being OFF (at least one must be enabled)
+- Settings load from AsyncStorage on app start
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/contexts/SettingsContext.tsx
+  - Created PomodoroTimer/components/SettingsScreen.tsx
+  - Created PomodoroTimer/components/SettingsButton.tsx
+  - Updated PomodoroTimer/App.tsx
+- **Learnings for future iterations:**
+  - Simple screen navigation can be done with useState<Screen> without a navigation library
+  - Use Switch component from react-native for toggle switches
+  - Disable a toggle switch when toggling it would violate a constraint (e.g., both OFF)
+- Web Audio API: Use AudioContext with oscillator for sound preview on web platform
+- expo-av: Use for native audio playback (installed as dependency)
+---
+
+## Wed Jan 14 2026 - US-007
+Thread: https://ampcode.com/threads/T-019bbb19-4032-759d-8387-c1ef40624c6d
+- Created SoundPicker component with modal for sound selection
+- Added 5 sound options: Bell, Chime, Ding, Gong, Alert
+- Sound preview uses Web Audio API (oscillator tones) for web platform
+- Selected sound ID persists to AsyncStorage via SettingsContext
+- Sound picker is disabled when sound notifications are disabled
+- Updated SettingsContext with selectedSoundId state and AVAILABLE_SOUNDS export
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/components/SoundPicker.tsx
+  - Updated PomodoroTimer/contexts/SettingsContext.tsx
+  - Updated PomodoroTimer/components/SettingsScreen.tsx
+  - Added expo-av dependency to package.json
+- **Learnings for future iterations:**
+  - Web Audio API: AudioContext + Oscillator provides simple sound preview for web
+  - Different oscillator types (sine, triangle, square) create different tones
+  - Modal with FlatList works well for selection lists in React Native
+  - Sound picker should be disabled when parent sound toggle is off
+---
+
+## Wed Jan 14 2026 - US-008
+Thread: https://ampcode.com/threads/T-019bbb1d-9d3e-7357-bc3f-ad25a92c49ad
+- Added isCompleted state to TimerContext to track when timer finishes
+- Created CompletionNotifier component for sound/vibration notifications
+- Updated CircularProgress to show green color when timer completes
+- Sound plays via Web Audio API (web) when timer completes
+- Vibration triggers via React Native Vibration API (native) when timer completes
+- Typecheck passes
+- Files changed:
+  - Updated PomodoroTimer/contexts/TimerContext.tsx (added isCompleted state)
+  - Updated PomodoroTimer/components/CircularProgress.tsx (visual indication)
+  - Created PomodoroTimer/components/CompletionNotifier.tsx
+  - Updated PomodoroTimer/App.tsx (added CompletionNotifier)
+- **Learnings for future iterations:**
+  - Use useRef to track if notification already fired (prevents duplicate notifications)
+  - React Native Vibration.vibrate accepts pattern array: [delay, duration, delay, duration, ...]
+  - Visual completion indication: change progress circle to green (#4CAF50) with light green background (#C8E6C9)
+---
+
+## Wed Jan 14 2026 - US-009
+Thread: https://ampcode.com/threads/T-019bbb20-6fb0-76c5-9519-72068724d944
+- Implemented background timer operation using AppState and endTimeRef
+- Store end timestamp (endTimeRef) when timer starts, calculate remaining on foreground return
+- Added expo-notifications for background completion notifications
+- Scheduled notifications fire when app is backgrounded
+- Cancels scheduled notifications on pause/stop/reset
+- Typecheck passes
+- Files changed:
+  - Updated PomodoroTimer/contexts/TimerContext.tsx (AppState handling, expo-notifications)
+  - Added expo-notifications dependency to package.json
+- **Learnings for future iterations:**
+  - Use AppState.addEventListener('change') to detect foreground/background transitions
+  - Store absolute end timestamp (Date.now() + remaining * 1000) rather than relative time for accurate background calculation
+  - expo-notifications requires shouldShowBanner and shouldShowList in notification handler for TypeScript
+  - Use SchedulableTriggerInputTypes.TIME_INTERVAL for scheduling notifications by seconds
+  - Platform.OS === 'web' check skips native-only notification scheduling
+---
+
+## Wed Jan 14 2026 - US-010
+- Fixed TypeScript error in widgetTaskHandler.tsx: use `widgetInfo.widgetName` instead of `widgetName`
+- Android widget properly displays remaining time with circular progress indicator
+- Widget has pause/resume button with clickAction handling
+- Widget updates every second via TimerContext calling requestWidgetUpdate()
+- Typecheck passes
+- Files changed:
+  - Updated PomodoroTimer/widgets/widgetTaskHandler.tsx (type fix)
+  - Updated PomodoroTimer/AGENTS.md (added Android Widget section)
+  - Created PomodoroTimer/widgets/PomodoroWidget.tsx (UI component)
+  - Created PomodoroTimer/widgets/widgetTaskHandler.tsx (logic handler)
+  - Created PomodoroTimer/utils/timerStorage.ts (state persistence)
+- **Learnings for future iterations:**
+  - react-native-android-widget: WidgetTaskHandlerProps has `widgetInfo` (object with widgetName), not direct `widgetName` property
+  - Widget must be registered in index.ts using `registerWidgetTaskHandler()`
+  - Widget state must be stored in AsyncStorage for cross-process access between app and widget
+  - Use SvgWidget with SVG string for circular progress in Android widgets
+  - FlexWidget clickAction prop enables button interactions (e.g., clickAction="PAUSE")
+
+## Wed Jan 14 2026 - US-011
+Thread: https://ampcode.com/threads/T-019bbb23-7c5e-7c4e-8db5-bb9ad4c7c7d2
+- Created iOS WidgetKit widget extension for Pomodoro Timer lock screen widget
+- Widget displays remaining time with circular progress indicator
+- Widget supports pause/resume control via button tap
+- Widget updates in real-time using timeline provider
+- Updated timer storage to use App Groups for shared state between app and widget
+- Added widget reload utility for iOS timeline updates
+- Updated TimerContext to reload iOS widget timelines on state changes
+- Typecheck passes
+- Files changed:
+  - Created PomodoroTimer/ios/PomodoroTimerWidget/PomodoroTimerWidget.swift (Swift widget bundle with provider and SwiftUI view)
+  - Created PomodoroTimer/ios/PomodoroTimerWidget/Info.plist (widget extension config)
+  - Created PomodoroTimer/ios/PomodoroTimerWidget/PomodoroTimerWidget.entitlements (App Groups)
+  - Updated PomodoroTimer/utils/timerStorage.ts (App Groups support for iOS)
+  - Created PomodoroTimer/utils/widgetReload.ts (widget reload utility)
+  - Updated PomodoroTimer/contexts/TimerContext.tsx (iOS widget reload)
+  - Updated PomodoroTimer/AGENTS.md (added iOS Widget section)
+- **Learnings for future iterations:**
+  - iOS widgets require separate Swift files in a widget extension directory
+  - Use App Groups to share state between main app and widget extension
+  - WidgetCenter native module requires declaration for TypeScript: `NativeModules.WidgetCenter.reloadAllTimelines()`
+  - iOS widgets use StaticConfiguration with TimelineProvider for real-time updates
+  - Widget state must be persisted to shared App Group for widget to read when app is backgrounded
+  - Widget timeline reload triggers the widget to refresh its display
+  - Swift @main attribute marks the widget bundle entry point
+

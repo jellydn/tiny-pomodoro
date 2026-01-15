@@ -1,0 +1,87 @@
+name: Build Android APK
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 1.0.0)'
+        required: false
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: PomodoroTimer
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Setup EAS CLI
+        run: bun add -g eas-cli
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Android APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx eas-cli build --platform android --profile preview --non-interactive --wait
+
+      - name: Download APK from EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          BUILD_URL=$(npx eas-cli build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+          curl -L -o PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk "$BUILD_URL"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk
+          body: |
+            ## PomodoroTimer v${{ steps.version.outputs.VERSION }}
+            
+            ### Download
+            - **Android APK**: Download the attached APK file
+            - **iOS**: Build locally using Xcode (see README)
+            
+            ### Installation (Android)
+            1. Download the APK file
+            2. Enable "Install from unknown sources" in Settings
+            3. Open the APK to install
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK artifact (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk
+          path: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk

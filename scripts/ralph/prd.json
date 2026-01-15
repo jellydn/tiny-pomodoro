@@ -1,17 +1,19 @@
 {
   "project": "PomodoroTimer",
-  "branchName": "ralph/pomodoro-timer",
-  "description": "Pomodoro Timer Mobile App - Simple, fast timer with presets, background operation, and lock screen widget",
+  "branchName": "ralph/cicd-distribution",
+  "description": "CI/CD Pipeline for App Distribution - Android APK with QR code sharing, local iOS builds",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Initialize React Native project structure",
-      "description": "As a developer, I need a clean React Native project setup to build the app.",
+      "title": "Document local iOS build process",
+      "description": "As a developer, I want documented steps to build and run on iPhone without Apple Developer account.",
       "acceptanceCriteria": [
-        "Create React Native project with TypeScript template",
-        "Add AsyncStorage dependency for local storage",
-        "Add react-native-svg for circular progress",
-        "Project builds successfully on iOS and Android",
+        "Add 'Local iOS Build' section to AGENTS.md",
+        "Document: npx expo prebuild to generate ios folder",
+        "Document: open ios/PomodoroTimer.xcworkspace in Xcode",
+        "Document: sign with free Apple ID (Personal Team) in Xcode",
+        "Document: run on connected iPhone via USB",
+        "Note 7-day certificate expiration limitation",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -20,12 +22,13 @@
     },
     {
       "id": "US-002",
-      "title": "Create timer state management",
-      "description": "As a developer, I need a timer state object to track duration, remaining time, and running status.",
+      "title": "Create eas.json with Android preview profile",
+      "description": "As a developer, I need EAS configuration to build Android APKs for distribution.",
       "acceptanceCriteria": [
-        "Create TimerContext with state: duration, remaining, isRunning, isPaused",
-        "Implement setDuration, start, pause, stop, reset actions",
-        "Timer decrements remaining time every second when running",
+        "Create eas.json in PomodoroTimer directory",
+        "Configure 'preview' profile with buildType: 'apk' for Android",
+        "Configure 'production' profile for future store builds",
+        "Set android.versionCode autoIncrement",
         "Typecheck passes"
       ],
       "priority": 2,
@@ -34,15 +37,16 @@
     },
     {
       "id": "US-003",
-      "title": "Build timer duration preset buttons",
-      "description": "As a user, I want to quickly select a timer duration so I can start focusing immediately.",
+      "title": "Create GitHub Actions workflow for Android APK",
+      "description": "As a developer, I want automated Android builds triggered by git tags.",
       "acceptanceCriteria": [
-        "Display 4 preset buttons: 25, 30, 45, 50 minutes",
-        "Selected duration is visually highlighted with different background color",
-        "Tapping a preset updates timer display immediately",
-        "Default selection is 25 minutes",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create .github/workflows/build-android.yml",
+        "Trigger on push of tags matching v*.*.* pattern",
+        "Support manual workflow_dispatch with version input",
+        "Use bun for package installation",
+        "Run eas build --platform android --profile preview --non-interactive",
+        "Authenticate with EXPO_TOKEN secret",
+        "Typecheck passes"
       ],
       "priority": 3,
       "passes": true,
@@ -50,15 +54,14 @@
     },
     {
       "id": "US-004",
-      "title": "Build circular progress display",
-      "description": "As a user, I want to see my progress visually so I know how much time remains at a glance.",
+      "title": "Upload APK to GitHub Releases",
+      "description": "As a developer, I want APK attached to GitHub releases for easy download.",
       "acceptanceCriteria": [
-        "Circular progress indicator using react-native-svg",
-        "Progress depletes clockwise as timer runs",
-        "Digital time display in center showing MM:SS format",
-        "Progress animates smoothly (updates every second)",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Workflow downloads APK after EAS build completes",
+        "Workflow creates GitHub Release with tag name",
+        "APK attached to release as downloadable asset",
+        "Release includes build notes with version",
+        "Typecheck passes"
       ],
       "priority": 4,
       "passes": true,
@@ -66,110 +69,18 @@
     },
     {
       "id": "US-005",
-      "title": "Build timer control buttons",
-      "description": "As a user, I want to control the timer so I can manage my focus sessions.",
+      "title": "Add QR code and release instructions to README",
+      "description": "As a user, I want easy instructions to download and install the app.",
       "acceptanceCriteria": [
-        "Start button begins countdown",
-        "Pause button stops countdown, preserves remaining time",
-        "Stop button resets timer to selected duration",
-        "Start and Pause are same button that toggles based on state",
-        "Stop button is separate and always visible",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create README.md in PomodoroTimer directory",
+        "Add project description and features",
+        "Add QR code image linking to GitHub releases page",
+        "Add manual download link to releases",
+        "Document Android installation steps (enable unknown sources)",
+        "Document iOS local build steps (reference AGENTS.md)",
+        "Add release process documentation for developers"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-006",
-      "title": "Create settings screen with notification toggles",
-      "description": "As a user, I want to choose how I'm notified when the timer ends.",
-      "acceptanceCriteria": [
-        "Settings screen accessible via gear icon on main screen",
-        "Toggle switch for Sound ON/OFF",
-        "Toggle switch for Vibration ON/OFF",
-        "Settings persist to AsyncStorage",
-        "Load settings on app start",
-        "At least one toggle must remain enabled (prevent both OFF)",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-007",
-      "title": "Add sound picker to settings",
-      "description": "As a user, I want to pick my notification sound from device system sounds.",
-      "acceptanceCriteria": [
-        "Sound picker shows list of available system sounds",
-        "User can select and preview a sound",
-        "Selected sound ID persists to AsyncStorage",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-008",
-      "title": "Implement timer completion notification",
-      "description": "As a user, I want to be notified when my timer ends so I know my session is complete.",
-      "acceptanceCriteria": [
-        "Play selected sound when timer reaches 0 (if sound enabled)",
-        "Vibrate device when timer reaches 0 (if vibration enabled)",
-        "Show visual indication on screen (progress circle changes color)",
-        "Typecheck passes"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-009",
-      "title": "Implement background timer operation",
-      "description": "As a user, I want the timer to continue when I switch apps or lock my phone.",
-      "acceptanceCriteria": [
-        "Timer continues counting when app is backgrounded",
-        "Store timer end timestamp when backgrounding",
-        "Calculate correct remaining time when app returns to foreground",
-        "Fire notification even when app is backgrounded",
-        "Typecheck passes"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-010",
-      "title": "Create Android lock screen widget",
-      "description": "As an Android user, I want to see and control my timer from the lock screen.",
-      "acceptanceCriteria": [
-        "Android App Widget displays remaining time",
-        "Widget shows mini progress indicator",
-        "Pause/resume button in widget",
-        "Widget updates every second while timer runs",
-        "Typecheck passes"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-011",
-      "title": "Create iOS lock screen widget",
-      "description": "As an iOS user, I want to see and control my timer from the lock screen.",
-      "acceptanceCriteria": [
-        "iOS WidgetKit widget displays remaining time",
-        "Widget shows mini progress indicator",
-        "Pause/resume control via widget tap",
-        "Widget updates in real-time using timeline",
-        "Typecheck passes"
-      ],
-      "priority": 11,
       "passes": true,
       "notes": ""
     }

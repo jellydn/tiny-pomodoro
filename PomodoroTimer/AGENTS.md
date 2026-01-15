@@ -38,6 +38,14 @@
 - Widget state stored in AsyncStorage (`timerStorage.ts`) for cross-process access
 - Type fix: Use `widgetInfo.widgetName` in widgetTaskHandler (not direct `widgetName` property)
 
+## Local iOS Build (Free - No Apple Developer Account)
+1. Generate native iOS project: `npx expo prebuild --platform ios`
+2. Open in Xcode: `open ios/PomodoroTimer.xcworkspace`
+3. In Xcode: Select your iPhone as target device
+4. In Signing & Capabilities: Select your free Apple ID as "Personal Team"
+5. Click Run (⌘R) to build and install on connected iPhone
+6. **Note:** Free certificates expire after 7 days - reinstall when expired
+
 ## iOS Widget
 - Uses WidgetKit with SwiftUI for lock screen widgets
 - Widget extension location: `ios/PomodoroTimerWidget/` directory
