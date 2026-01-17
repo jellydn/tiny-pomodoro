@@ -4,6 +4,6 @@ export type PomodoroWidgetProps = {
   isRunning: boolean;
 };
 
-export function PomodoroWidget(_props: PomodoroWidgetProps): React.JSX.Element | null {
+export function PomodoroWidget(_props: PomodoroWidgetProps) {
   return null;
 }

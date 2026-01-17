@@ -1,10 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { requestWidgetUpdate } from 'react-native-android-widget';
 import { saveTimerState, loadTimerState, computeRemainingFromState, type PersistedTimerState } from '../utils/timerStorage';
-import { PomodoroWidget } from '../widgets/PomodoroWidget';
 import { reloadWidgetTimelines } from '../utils/widgetReload';
+import { PomodoroWidget } from '../widgets/PomodoroWidget';
+
+let requestWidgetUpdate: typeof import('react-native-android-widget').requestWidgetUpdate | undefined;
+
+if (Platform.OS === 'android') {
+  requestWidgetUpdate = require('react-native-android-widget').requestWidgetUpdate;
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -37,7 +42,7 @@ const DEFAULT_DURATION = 25 * 60;
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
 function updateWidget(remainingSeconds: number, durationSeconds: number, isRunning: boolean) {
-  if (Platform.OS === 'android') {
+  if (Platform.OS === 'android' && requestWidgetUpdate) {
     requestWidgetUpdate({
       widgetName: 'PomodoroWidget',
       renderWidget: () => (

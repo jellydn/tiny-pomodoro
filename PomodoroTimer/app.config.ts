@@ -53,6 +53,7 @@ const config: ExpoConfig = {
         ],
       },
     ],
+    './plugins/ios-widget/withIOSWidget',
   ],
 };
 

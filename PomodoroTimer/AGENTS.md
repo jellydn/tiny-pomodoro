@@ -48,15 +48,12 @@
 
 ## iOS Widget
 - Uses WidgetKit with SwiftUI for lock screen widgets
-- Widget extension location: `ios/PomodoroTimerWidget/` directory
-- Main files: `PomodoroTimerWidget.swift` (widget bundle, provider, and SwiftUI view)
+- **Source of truth**: `plugins/ios-widget/` (preserved across prebuild)
+- **Generated location**: `ios/PomodoroTimerWidget/` (auto-copied during prebuild)
 - Uses App Group `group.com.pomodorotimer.shared` for shared state between app and widget
 - Update timer storage with App Group prefix for iOS: `${APP_GROUP_ID}:${TIMER_STATE_KEY}`
 - Widget displays remaining time with circular progress indicator
 - Widget supports pause/resume via button tap
 - Widget updates in real-time using timeline provider
 - Reload widget timelines from app using `NativeModules.WidgetCenter.reloadAllTimelines()`
-- Widget configuration:
-  - Display name: "Pomodoro Timer"
-  - Description: "View and control your Pomodoro timer from the lock screen."
-  - Supported families: `.systemSmall`, `.systemMedium`
+- See [ADR-001](docs/adr/001-ios-widget-expo-plugin.md) for architecture details
