@@ -57,8 +57,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     extra: {
       eas: {
-        projectId: '6850ae80-bbde-4a62-9c45-cba7071478a6',
+        projectId: 'e3224d5e-56cf-4acd-bdd6-0f09947ab0fe',
       },
+      owner: 'dunghd',
     },
     plugins,
   };
