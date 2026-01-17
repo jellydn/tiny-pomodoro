@@ -47,11 +47,11 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build iOS IPA (Ad Hoc)
+      - name: Build iOS Simulator
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          npx eas-cli build --platform ios --profile preview --non-interactive --wait
+          npx eas-cli build --platform ios --profile simulator --non-interactive --wait
 
       - name: Download IPA from EAS
         env:
