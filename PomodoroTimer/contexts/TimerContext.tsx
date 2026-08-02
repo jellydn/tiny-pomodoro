@@ -2,8 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { saveTimerState, loadTimerState, computeRemainingFromState, type PersistedTimerState } from '../utils/timerStorage';
-import { reloadWidgetTimelines } from '../utils/widgetReload';
-import { updateAndroidWidget } from '../utils/androidWidget';
+import { updateWidget } from '../utils/widgetSync';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -34,14 +33,6 @@ interface TimerContextType extends TimerState {
 const DEFAULT_DURATION = 25 * 60;
 
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
-
-function updateWidget(remainingSeconds: number, durationSeconds: number, isRunning: boolean) {
-  if (Platform.OS === 'android') {
-    updateAndroidWidget(remainingSeconds, durationSeconds, isRunning);
-  } else if (Platform.OS === 'ios') {
-    reloadWidgetTimelines();
-  }
-}
 
 export function TimerProvider({ children }: { children: ReactNode }) {
   const [duration, setDurationState] = useState(DEFAULT_DURATION);

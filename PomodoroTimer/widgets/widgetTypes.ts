@@ -3,7 +3,3 @@ export type PomodoroWidgetProps = {
   durationSeconds: number;
   isRunning: boolean;
 };
-
-export function PomodoroWidget(_props: PomodoroWidgetProps): React.JSX.Element | null {
-  return null;
-}

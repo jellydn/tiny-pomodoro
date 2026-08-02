@@ -6,12 +6,9 @@ import {
   TextWidget,
   SvgWidget,
 } from 'react-native-android-widget';
+import type { PomodoroWidgetProps } from './widgetTypes';
 
-export type PomodoroWidgetProps = {
-  remainingSeconds: number;
-  durationSeconds: number;
-  isRunning: boolean;
-};
+export type { PomodoroWidgetProps } from './widgetTypes';
 
 export function PomodoroWidget({
   remainingSeconds,

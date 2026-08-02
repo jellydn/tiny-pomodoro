@@ -1,16 +1,15 @@
 import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
-import { PomodoroWidget } from './PomodoroWidget';
+import { PomodoroWidget } from './androidPomodoroWidget';
 import {
   loadTimerState,
   saveTimerState,
   computeRemainingFromState,
   type PersistedTimerState,
 } from '../utils/timerStorage';
+import { DEFAULT_DURATION } from '../utils/timerState';
 
-const DEFAULT_DURATION = 25 * 60;
-
-export async function widgetTaskHandler(
+export async function runWidgetTaskHandler(
   props: WidgetTaskHandlerProps
 ): Promise<void> {
   const { widgetAction, widgetInfo, renderWidget, clickAction } = props;
