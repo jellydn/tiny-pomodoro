@@ -27,14 +27,22 @@ export function deserializeTimerState(raw: string): PersistedTimerState {
   return JSON.parse(raw) as PersistedTimerState;
 }
 
-export function computeRemainingFromState(state: PersistedTimerState): {
+export type RemainingComputation = {
   remaining: number;
   isRunning: boolean;
   isCompleted: boolean;
   endTimestamp: number | null;
-} {
+};
+
+// Pure wall-clock reconciliation: given a (possibly stale) session and the
+// current time, return the actual remaining time. Shared by the session engine
+// (which passes `now` explicitly for testability) and the storage convenience
+// wrapper below — one formula, not two copies.
+export function computeRemaining(
+  state: Pick<PersistedTimerState, 'isRunning' | 'endTimestamp' | 'remaining' | 'isCompleted'>,
+  now: number
+): RemainingComputation {
   if (state.isRunning && state.endTimestamp) {
-    const now = Date.now();
     const newRemaining = Math.max(0, Math.ceil((state.endTimestamp - now) / 1000));
 
     if (newRemaining <= 0) {
@@ -60,4 +68,8 @@ export function computeRemainingFromState(state: PersistedTimerState): {
     isCompleted: state.isCompleted,
     endTimestamp: state.endTimestamp,
   };
+}
+
+export function computeRemainingFromState(state: PersistedTimerState): RemainingComputation {
+  return computeRemaining(state, Date.now());
 }
