@@ -32,6 +32,10 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scheduledNotificationRef = useRef<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  // Latest session, readable from interval/AppState callbacks without stale
+  // closures. Every state change flows through `commit`, which writes the ref
+  // synchronously so side effects always run against the freshest state.
+  const sessionRef = useRef<SessionState>(session);
 
   const persistState = useCallback((next: SessionState) => {
     const fullState: PersistedTimerState = {
@@ -81,18 +85,23 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     scheduledNotificationRef.current = id;
   }, [cancelScheduledNotification]);
 
-  const applyAction = useCallback((action: SessionAction, options?: { notify?: boolean }) => {
-    const next = reduceSession(session, action);
-    if (next === session) return;
+  const commit = useCallback((next: SessionState) => {
+    sessionRef.current = next;
     setSession(next);
+  }, []);
+
+  const applyAction = useCallback((action: SessionAction) => {
+    const prev = sessionRef.current;
+    const next = reduceSession(prev, action);
+    if (next === prev) return;
+    commit(next);
     if (next.isRunning) {
       void scheduleCompletionNotification(next.remaining);
     } else if (!next.isCompleted) {
       void cancelScheduledNotification();
     }
     persistState(next);
-    void updateWidget(next.remaining, next.duration, next.isRunning);
-  }, [session, scheduleCompletionNotification, cancelScheduledNotification, persistState]);
+  }, [commit, scheduleCompletionNotification, cancelScheduledNotification, persistState]);
 
   const setDuration = useCallback((newDuration: number) => {
     applyAction({ type: 'setDuration', duration: newDuration });
@@ -128,14 +137,14 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           endTimestamp: storedState.endTimestamp,
         };
         const reconciled = reduceSession(base, { type: 'reconcile', now: Date.now() });
-        setSession(reconciled);
+        commit(reconciled);
         if (reconciled.isCompleted && !storedState.isCompleted) {
           persistState(reconciled);
         }
       }
       setIsHydrated(true);
     })();
-  }, [persistState]);
+  }, [commit, persistState]);
 
   // Reconcile against wall-clock time when returning to the foreground.
   useEffect(() => {
@@ -144,45 +153,47 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         appStateRef.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        setSession((prev) => {
-          if (!prev.isRunning || !prev.endTimestamp) return prev;
+        const prev = sessionRef.current;
+        if (prev.isRunning && prev.endTimestamp) {
           const next = reduceSession(prev, { type: 'reconcile', now: Date.now() });
+          commit(next);
           if (next.isCompleted && !prev.isCompleted) {
             persistState(next);
-            void updateWidget(next.remaining, next.duration, next.isRunning);
           }
-          return next;
-        });
+        }
       }
       appStateRef.current = nextAppState;
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => subscription.remove();
-  }, [persistState]);
+  }, [commit, persistState]);
 
-  // One-second interval while running.
+  // One-second interval while running. Keyed only on isRunning so the
+  // interval is not torn down and recreated on every tick; reduceSession's
+  // no-op guard handles late ticks after pause/completion.
   useEffect(() => {
-    if (session.isRunning && session.remaining > 0) {
+    if (session.isRunning) {
       intervalRef.current = setInterval(() => {
-        setSession((prev) => {
-          const next = reduceSession(prev, { type: 'tick', now: Date.now() });
-          if (next.isCompleted && !prev.isCompleted) {
-            clearTimer();
-            persistState(next);
-            void updateWidget(next.remaining, next.duration, next.isRunning);
-          } else if (next.isRunning) {
-            void updateWidget(next.remaining, next.duration, true);
-          }
-          return next;
-        });
+        const prev = sessionRef.current;
+        const next = reduceSession(prev, { type: 'tick', now: Date.now() });
+        if (next === prev) return;
+        commit(next);
+        if (next.isCompleted && !prev.isCompleted) {
+          clearTimer();
+          // persistState syncs the widget too — no separate updateWidget here.
+          persistState(next);
+        } else if (next.isRunning) {
+          // Live countdown on the widget.
+          void updateWidget(next.remaining, next.duration, true);
+        }
       }, 1000);
     }
 
     return () => {
       clearTimer();
     };
-  }, [session.isRunning, session.remaining, clearTimer, persistState]);
+  }, [session.isRunning, commit, clearTimer, persistState]);
 
   if (!isHydrated) {
     return null;
