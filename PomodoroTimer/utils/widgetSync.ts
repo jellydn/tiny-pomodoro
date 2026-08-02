@@ -8,10 +8,17 @@ import { reloadWidgetTimelines } from './widgetReload';
 //
 // `react-native-android-widget` is loaded via dynamic import so it stays out of
 // the iOS bundle; on iOS we reload WidgetKit timelines instead.
+//
+// WidgetKit reloads are expensive, so callers can suppress them with
+// `reloadIOS: false` — used by the one-second tick, where the Android widget
+// needs a live countdown but iOS timelines should only be regenerated on state
+// transitions (start/pause/stop/completion). The iOS widget derives a live
+// countdown from the shared endTimestamp in its timeline entries.
 export async function updateWidget(
   remainingSeconds: number,
   durationSeconds: number,
-  isRunning: boolean
+  isRunning: boolean,
+  options?: { reloadIOS?: boolean }
 ): Promise<void> {
   if (Platform.OS === 'android') {
     const { requestWidgetUpdate } = await import('react-native-android-widget');
@@ -26,7 +33,7 @@ export async function updateWidget(
           isRunning,
         }),
     });
-  } else if (Platform.OS === 'ios') {
+  } else if (Platform.OS === 'ios' && options?.reloadIOS !== false) {
     await reloadWidgetTimelines();
   }
 }

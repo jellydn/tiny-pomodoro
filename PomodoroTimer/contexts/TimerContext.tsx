@@ -184,8 +184,10 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           // persistState syncs the widget too — no separate updateWidget here.
           persistState(next);
         } else if (next.isRunning) {
-          // Live countdown on the widget.
-          void updateWidget(next.remaining, next.duration, true);
+          // Live countdown on the widget. iOS WidgetKit timelines are not
+          // reloaded here — they are regenerated on state transitions only
+          // (see updateWidget's reloadIOS option).
+          void updateWidget(next.remaining, next.duration, true, { reloadIOS: false });
         }
       }, 1000);
     }
