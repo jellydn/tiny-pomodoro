@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { saveTimerState, loadTimerState, computeRemainingFromState, type PersistedTimerState } from '../utils/timerStorage';
+import { saveTimerState, loadTimerState, type PersistedTimerState } from '../utils/timerStorage';
+import { DEFAULT_DURATION } from '../utils/timerState';
 import { updateWidget } from '../utils/widgetSync';
+import { createSession, reduceSession, type SessionAction, type SessionState } from '../utils/sessionEngine';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -14,15 +16,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-interface TimerState {
-  duration: number;
-  remaining: number;
-  isRunning: boolean;
-  isPaused: boolean;
-  isCompleted: boolean;
-}
-
-interface TimerContextType extends TimerState {
+interface TimerContextType extends Omit<SessionState, 'endTimestamp'> {
   setDuration: (duration: number) => void;
   start: () => void;
   pause: () => void;
@@ -30,29 +24,22 @@ interface TimerContextType extends TimerState {
   reset: () => void;
 }
 
-const DEFAULT_DURATION = 25 * 60;
-
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
 export function TimerProvider({ children }: { children: ReactNode }) {
-  const [duration, setDurationState] = useState(DEFAULT_DURATION);
-  const [remaining, setRemaining] = useState(DEFAULT_DURATION);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [session, setSession] = useState<SessionState>(() => createSession(DEFAULT_DURATION));
   const [isHydrated, setIsHydrated] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const endTimeRef = useRef<number | null>(null);
   const scheduledNotificationRef = useRef<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
-  const persistState = useCallback((state: Omit<PersistedTimerState, 'updatedAt'>) => {
+  const persistState = useCallback((next: SessionState) => {
     const fullState: PersistedTimerState = {
-      ...state,
+      ...next,
       updatedAt: Date.now(),
     };
     saveTimerState(fullState);
-    updateWidget(state.remaining, state.duration, state.isRunning);
+    void updateWidget(next.remaining, next.duration, next.isRunning);
   }, []);
 
   const clearTimer = useCallback(() => {
@@ -71,9 +58,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
 
   const scheduleCompletionNotification = useCallback(async (secondsFromNow: number) => {
     if (Platform.OS === 'web') return;
-    
+
     await cancelScheduledNotification();
-    
+
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
       const { status: newStatus } = await Notifications.requestPermissionsAsync();
@@ -94,169 +81,99 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     scheduledNotificationRef.current = id;
   }, [cancelScheduledNotification]);
 
+  const applyAction = useCallback((action: SessionAction, options?: { notify?: boolean }) => {
+    const next = reduceSession(session, action);
+    if (next === session) return;
+    setSession(next);
+    if (next.isRunning) {
+      void scheduleCompletionNotification(next.remaining);
+    } else if (!next.isCompleted) {
+      void cancelScheduledNotification();
+    }
+    persistState(next);
+    void updateWidget(next.remaining, next.duration, next.isRunning);
+  }, [session, scheduleCompletionNotification, cancelScheduledNotification, persistState]);
+
   const setDuration = useCallback((newDuration: number) => {
-    setDurationState(newDuration);
-    setRemaining(newDuration);
-    setIsRunning(false);
-    setIsPaused(false);
-    setIsCompleted(false);
-    endTimeRef.current = null;
-    clearTimer();
-    cancelScheduledNotification();
-    persistState({
-      duration: newDuration,
-      remaining: newDuration,
-      isRunning: false,
-      isPaused: false,
-      isCompleted: false,
-      endTimestamp: null,
-    });
-  }, [clearTimer, cancelScheduledNotification, persistState]);
+    applyAction({ type: 'setDuration', duration: newDuration });
+  }, [applyAction]);
 
   const start = useCallback(() => {
-    if (remaining <= 0) return;
-    const endTimestamp = Date.now() + remaining * 1000;
-    setIsRunning(true);
-    setIsPaused(false);
-    setIsCompleted(false);
-    endTimeRef.current = endTimestamp;
-    scheduleCompletionNotification(remaining);
-    persistState({
-      duration,
-      remaining,
-      isRunning: true,
-      isPaused: false,
-      isCompleted: false,
-      endTimestamp,
-    });
-  }, [remaining, duration, scheduleCompletionNotification, persistState]);
+    applyAction({ type: 'start', now: Date.now() });
+  }, [applyAction]);
 
   const pause = useCallback(() => {
-    setIsRunning(false);
-    setIsPaused(true);
-    endTimeRef.current = null;
-    clearTimer();
-    cancelScheduledNotification();
-    persistState({
-      duration,
-      remaining,
-      isRunning: false,
-      isPaused: true,
-      isCompleted: false,
-      endTimestamp: null,
-    });
-  }, [duration, remaining, clearTimer, cancelScheduledNotification, persistState]);
+    applyAction({ type: 'pause' });
+  }, [applyAction]);
 
   const stop = useCallback(() => {
-    setIsRunning(false);
-    setIsPaused(false);
-    setIsCompleted(false);
-    setRemaining(duration);
-    endTimeRef.current = null;
-    clearTimer();
-    cancelScheduledNotification();
-    persistState({
-      duration,
-      remaining: duration,
-      isRunning: false,
-      isPaused: false,
-      isCompleted: false,
-      endTimestamp: null,
-    });
-  }, [duration, clearTimer, cancelScheduledNotification, persistState]);
+    applyAction({ type: 'stop' });
+  }, [applyAction]);
 
   const reset = useCallback(() => {
-    setIsRunning(false);
-    setIsPaused(false);
-    setIsCompleted(false);
-    setRemaining(duration);
-    endTimeRef.current = null;
-    clearTimer();
-    cancelScheduledNotification();
-    persistState({
-      duration,
-      remaining: duration,
-      isRunning: false,
-      isPaused: false,
-      isCompleted: false,
-      endTimestamp: null,
-    });
-  }, [duration, clearTimer, cancelScheduledNotification, persistState]);
+    applyAction({ type: 'reset' });
+  }, [applyAction]);
 
+  // Hydrate from persisted state and reconcile against wall-clock time.
   useEffect(() => {
     (async () => {
       const storedState = await loadTimerState();
       if (storedState) {
-        const computed = computeRemainingFromState(storedState);
-        setDurationState(storedState.duration ?? DEFAULT_DURATION);
-        setRemaining(computed.remaining);
-        setIsRunning(computed.isRunning);
-        setIsPaused(storedState.isPaused && !computed.isRunning);
-        setIsCompleted(computed.isCompleted);
-        endTimeRef.current = computed.endTimestamp;
+        const base: SessionState = {
+          duration: storedState.duration ?? DEFAULT_DURATION,
+          remaining: storedState.remaining,
+          isRunning: storedState.isRunning,
+          isPaused: storedState.isPaused,
+          isCompleted: storedState.isCompleted,
+          endTimestamp: storedState.endTimestamp,
+        };
+        const reconciled = reduceSession(base, { type: 'reconcile', now: Date.now() });
+        setSession(reconciled);
+        if (reconciled.isCompleted && !storedState.isCompleted) {
+          persistState(reconciled);
+        }
       }
       setIsHydrated(true);
     })();
-  }, []);
+  }, [persistState]);
 
+  // Reconcile against wall-clock time when returning to the foreground.
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (
         appStateRef.current.match(/inactive|background/) &&
-        nextAppState === 'active' &&
-        endTimeRef.current !== null
+        nextAppState === 'active'
       ) {
-        const now = Date.now();
-        const newRemaining = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000));
-        
-        if (newRemaining <= 0) {
-          setRemaining(0);
-          setIsRunning(false);
-          setIsCompleted(true);
-          endTimeRef.current = null;
-          persistState({
-            duration,
-            remaining: 0,
-            isRunning: false,
-            isPaused: false,
-            isCompleted: true,
-            endTimestamp: null,
-          });
-        } else {
-          setRemaining(newRemaining);
-        }
+        setSession((prev) => {
+          if (!prev.isRunning || !prev.endTimestamp) return prev;
+          const next = reduceSession(prev, { type: 'reconcile', now: Date.now() });
+          if (next.isCompleted && !prev.isCompleted) {
+            persistState(next);
+            void updateWidget(next.remaining, next.duration, next.isRunning);
+          }
+          return next;
+        });
       }
       appStateRef.current = nextAppState;
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => subscription.remove();
-  }, [duration, persistState]);
+  }, [persistState]);
 
+  // One-second interval while running.
   useEffect(() => {
-    if (isRunning && remaining > 0) {
+    if (session.isRunning && session.remaining > 0) {
       intervalRef.current = setInterval(() => {
-        setRemaining((prev) => {
-          const next = prev <= 1 ? 0 : prev - 1;
-          const endTimestamp = next > 0 ? Date.now() + next * 1000 : null;
-          
-          if (next === 0) {
+        setSession((prev) => {
+          const next = reduceSession(prev, { type: 'tick', now: Date.now() });
+          if (next.isCompleted && !prev.isCompleted) {
             clearTimer();
-            setIsRunning(false);
-            setIsCompleted(true);
-            endTimeRef.current = null;
-            persistState({
-              duration,
-              remaining: 0,
-              isRunning: false,
-              isPaused: false,
-              isCompleted: true,
-              endTimestamp: null,
-            });
-          } else {
-            updateWidget(next, duration, true);
+            persistState(next);
+            void updateWidget(next.remaining, next.duration, next.isRunning);
+          } else if (next.isRunning) {
+            void updateWidget(next.remaining, next.duration, true);
           }
-          
           return next;
         });
       }, 1000);
@@ -265,7 +182,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     return () => {
       clearTimer();
     };
-  }, [isRunning, clearTimer, duration, persistState]);
+  }, [session.isRunning, session.remaining, clearTimer, persistState]);
 
   if (!isHydrated) {
     return null;
@@ -274,11 +191,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   return (
     <TimerContext.Provider
       value={{
-        duration,
-        remaining,
-        isRunning,
-        isPaused,
-        isCompleted,
+        duration: session.duration,
+        remaining: session.remaining,
+        isRunning: session.isRunning,
+        isPaused: session.isPaused,
+        isCompleted: session.isCompleted,
         setDuration,
         start,
         pause,
