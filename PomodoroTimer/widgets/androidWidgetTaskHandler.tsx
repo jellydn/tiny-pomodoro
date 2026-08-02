@@ -4,10 +4,10 @@ import { PomodoroWidget } from './androidPomodoroWidget';
 import {
   loadTimerState,
   saveTimerState,
-  computeRemainingFromState,
   type PersistedTimerState,
 } from '../utils/timerStorage';
 import { DEFAULT_DURATION } from '../utils/timerState';
+import { createSession, reduceSession, type SessionState } from '../utils/sessionEngine';
 
 export async function runWidgetTaskHandler(
   props: WidgetTaskHandlerProps
@@ -18,53 +18,47 @@ export async function runWidgetTaskHandler(
     return;
   }
 
-  let remainingSeconds = DEFAULT_DURATION;
   let durationSeconds = DEFAULT_DURATION;
-  let isRunning = false;
-
   const storedState = await loadTimerState();
 
   if (storedState) {
     durationSeconds = storedState.duration ?? DEFAULT_DURATION;
-    const computed = computeRemainingFromState(storedState);
-    remainingSeconds = computed.remaining;
-    isRunning = computed.isRunning;
+  }
 
-    if (widgetAction === 'WIDGET_CLICK' && clickAction) {
-      if (clickAction === 'PAUSE' && isRunning) {
-        isRunning = false;
-        const newState: PersistedTimerState = {
-          duration: durationSeconds,
-          remaining: remainingSeconds,
-          isRunning: false,
-          isPaused: true,
-          isCompleted: false,
-          endTimestamp: null,
-          updatedAt: Date.now(),
-        };
-        await saveTimerState(newState);
-      } else if (clickAction === 'RESUME' && !isRunning && remainingSeconds > 0) {
-        isRunning = true;
-        const endTimestamp = Date.now() + remainingSeconds * 1000;
-        const newState: PersistedTimerState = {
-          duration: durationSeconds,
-          remaining: remainingSeconds,
-          isRunning: true,
-          isPaused: false,
-          isCompleted: false,
-          endTimestamp,
-          updatedAt: Date.now(),
-        };
-        await saveTimerState(newState);
+  // Rehydrate from the persisted contract and reconcile against wall-clock time
+  // using the same engine the app drives.
+  let session: SessionState = storedState
+    ? {
+        duration: storedState.duration ?? DEFAULT_DURATION,
+        remaining: storedState.remaining,
+        isRunning: storedState.isRunning,
+        isPaused: storedState.isPaused,
+        isCompleted: storedState.isCompleted,
+        endTimestamp: storedState.endTimestamp,
       }
+    : createSession(durationSeconds);
+
+  session = reduceSession(session, { type: 'reconcile', now: Date.now() });
+
+  if (widgetAction === 'WIDGET_CLICK' && clickAction) {
+    if (clickAction === 'PAUSE' && session.isRunning) {
+      session = reduceSession(session, { type: 'pause' });
+    } else if (clickAction === 'RESUME' && !session.isRunning && session.remaining > 0) {
+      session = reduceSession(session, { type: 'start', now: Date.now() });
     }
+
+    const newState: PersistedTimerState = {
+      ...session,
+      updatedAt: Date.now(),
+    };
+    await saveTimerState(newState);
   }
 
   renderWidget(
     <PomodoroWidget
-      remainingSeconds={remainingSeconds}
-      durationSeconds={durationSeconds}
-      isRunning={isRunning}
+      remainingSeconds={session.remaining}
+      durationSeconds={session.duration}
+      isRunning={session.isRunning}
     />
   );
 }
