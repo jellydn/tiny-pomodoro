@@ -7,10 +7,9 @@ import {
   computeRemainingFromState,
   type PersistedTimerState,
 } from '../utils/timerStorage';
+import { DEFAULT_DURATION } from '../utils/timerState';
 
-const DEFAULT_DURATION = 25 * 60;
-
-export async function widgetTaskHandler(
+export async function runWidgetTaskHandler(
   props: WidgetTaskHandlerProps
 ): Promise<void> {
   const { widgetAction, widgetInfo, renderWidget, clickAction } = props;
