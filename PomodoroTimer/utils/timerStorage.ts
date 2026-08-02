@@ -1,87 +1,98 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
+import {
+  APP_GROUP_ID,
+  TIMER_STATE_KEY,
+  serializeTimerState,
+  deserializeTimerState,
+  computeRemainingFromState,
+  DEFAULT_DURATION,
+  type PersistedTimerState,
+} from './timerState';
 
-export const TIMER_STATE_KEY = 'pomodoro_timer_state_v1';
-export const APP_GROUP_ID = 'group.com.pomodorotimer.shared';
+export {
+  APP_GROUP_ID,
+  TIMER_STATE_KEY,
+  computeRemainingFromState,
+  DEFAULT_DURATION,
+  type PersistedTimerState,
+} from './timerState';
 
-function getStorageLocation(): string | null {
-  if (Platform.OS === 'ios') {
-    return APP_GROUP_ID;
+declare module 'react-native' {
+  interface NativeModulesStatic {
+    PomodoroUserDefaults?: {
+      setItem: (key: string, value: string) => void;
+      getItem: (key: string) => Promise<string | null>;
+    };
   }
-  return null;
 }
 
-export type PersistedTimerState = {
-  duration: number;
-  remaining: number;
-  isRunning: boolean;
-  isPaused: boolean;
-  isCompleted: boolean;
-  endTimestamp: number | null;
-  updatedAt: number;
-};
+// A store abstracts *where* the timer state lives. One contract, two backends:
+// - AsyncStorage (Android + web, and the iOS fallback)
+// - App Group UserDefaults (iOS, shared with the WidgetKit extension) — used
+//   when the PomodoroUserDefaults native module is present; otherwise we fall
+//   back to AsyncStorage so the app keeps working before native wiring.
+export interface TimerStateStore {
+  save(state: PersistedTimerState): Promise<void>;
+  load(): Promise<PersistedTimerState | null>;
+}
+
+class AsyncStorageStore implements TimerStateStore {
+  async save(state: PersistedTimerState): Promise<void> {
+    await AsyncStorage.setItem(TIMER_STATE_KEY, serializeTimerState(state));
+  }
+
+  async load(): Promise<PersistedTimerState | null> {
+    const raw = await AsyncStorage.getItem(TIMER_STATE_KEY);
+    return raw ? deserializeTimerState(raw) : null;
+  }
+}
+
+class AppGroupUserDefaultsStore implements TimerStateStore {
+  private get native() {
+    return NativeModules.PomodoroUserDefaults;
+  }
+
+  async save(state: PersistedTimerState): Promise<void> {
+    const raw = serializeTimerState(state);
+    if (this.native) {
+      this.native.setItem(TIMER_STATE_KEY, raw);
+    } else {
+      await AsyncStorage.setItem(TIMER_STATE_KEY, raw);
+    }
+  }
+
+  async load(): Promise<PersistedTimerState | null> {
+    if (this.native) {
+      const raw = await this.native.getItem(TIMER_STATE_KEY);
+      return raw ? deserializeTimerState(raw) : null;
+    }
+    const raw = await AsyncStorage.getItem(TIMER_STATE_KEY);
+    return raw ? deserializeTimerState(raw) : null;
+  }
+}
+
+let store: TimerStateStore | null = null;
+
+export function getTimerStateStore(): TimerStateStore {
+  if (!store) {
+    store = Platform.OS === 'ios' ? new AppGroupUserDefaultsStore() : new AsyncStorageStore();
+  }
+  return store;
+}
 
 export async function saveTimerState(state: PersistedTimerState): Promise<void> {
   try {
-    const storageLocation = getStorageLocation();
-    if (storageLocation) {
-      await AsyncStorage.setItem(`${storageLocation}:${TIMER_STATE_KEY}`, JSON.stringify(state));
-    } else {
-      await AsyncStorage.setItem(TIMER_STATE_KEY, JSON.stringify(state));
-    }
+    await getTimerStateStore().save(state);
   } catch {
+    // Persistence is best-effort; a failure here should not break the timer.
   }
 }
 
 export async function loadTimerState(): Promise<PersistedTimerState | null> {
   try {
-    const storageLocation = getStorageLocation();
-    let raw: string | null = null;
-
-    if (storageLocation) {
-      raw = await AsyncStorage.getItem(`${storageLocation}:${TIMER_STATE_KEY}`);
-    } else {
-      raw = await AsyncStorage.getItem(TIMER_STATE_KEY);
-    }
-
-    if (!raw) return null;
-    return JSON.parse(raw) as PersistedTimerState;
+    return await getTimerStateStore().load();
   } catch {
     return null;
   }
-}
-
-export function computeRemainingFromState(state: PersistedTimerState): {
-  remaining: number;
-  isRunning: boolean;
-  isCompleted: boolean;
-  endTimestamp: number | null;
-} {
-  if (state.isRunning && state.endTimestamp) {
-    const now = Date.now();
-    const newRemaining = Math.max(0, Math.ceil((state.endTimestamp - now) / 1000));
-    
-    if (newRemaining <= 0) {
-      return {
-        remaining: 0,
-        isRunning: false,
-        isCompleted: true,
-        endTimestamp: null,
-      };
-    }
-    
-    return {
-      remaining: newRemaining,
-      isRunning: true,
-      isCompleted: false,
-      endTimestamp: state.endTimestamp,
-    };
-  }
-  
-  return {
-    remaining: state.remaining,
-    isRunning: state.isRunning,
-    isCompleted: state.isCompleted,
-    endTimestamp: state.endTimestamp,
-  };
 }
