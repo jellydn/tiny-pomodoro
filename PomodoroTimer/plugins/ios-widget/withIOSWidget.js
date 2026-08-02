@@ -5,40 +5,54 @@ const path = require('path');
 const WIDGET_NAME = 'PomodoroTimerWidget';
 const APP_GROUP = 'group.com.pomodorotimer.shared';
 
+// Files that belong to the widget extension target (copied to ios/PomodoroTimerWidget/).
+const WIDGET_FILES = [
+  'PomodoroTimerWidget.swift',
+  'Info.plist',
+  'PomodoroTimerWidget.entitlements',
+];
+
+// Files that belong to the main app target (copied to ios/).
+const APP_TARGET_FILES = ['PomodoroUserDefaults.swift'];
+
+function copyFiles(config, { targetDir, files, label }) {
+  return withDangerousMod(config, [
+    'ios',
+    async (config) => {
+      const projectRoot = config.modRequest.projectRoot;
+      const iosPath = path.join(projectRoot, 'ios');
+      const destDir = path.join(iosPath, targetDir);
+      const pluginDir = path.join(__dirname);
+
+      if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir, { recursive: true });
+      }
+
+      for (const file of files) {
+        const src = path.join(pluginDir, file);
+        const dest = path.join(destDir, file);
+        if (fs.existsSync(src)) {
+          fs.copyFileSync(src, dest);
+          console.log(`  Copied ${file} to ios/${targetDir}/`);
+        }
+      }
+
+      console.log(label);
+      return config;
+    },
+  ]);
+}
+
 function withIOSWidget(config) {
   config = withEntitlementsPlist(config, (config) => {
     config.modResults['com.apple.security.application-groups'] = [APP_GROUP];
     return config;
   });
 
-  config = withDangerousMod(config, [
-    'ios',
-    async (config) => {
-      const projectRoot = config.modRequest.projectRoot;
-      const iosPath = path.join(projectRoot, 'ios');
-      const widgetPath = path.join(iosPath, WIDGET_NAME);
-      const pluginWidgetPath = path.join(__dirname);
-
-      if (!fs.existsSync(widgetPath)) {
-        fs.mkdirSync(widgetPath, { recursive: true });
-      }
-
-      const filesToCopy = [
-        'PomodoroTimerWidget.swift',
-        'Info.plist',
-        'PomodoroTimerWidget.entitlements',
-      ];
-
-      for (const file of filesToCopy) {
-        const src = path.join(pluginWidgetPath, file);
-        const dest = path.join(widgetPath, file);
-        if (fs.existsSync(src)) {
-          fs.copyFileSync(src, dest);
-          console.log(`  Copied ${file} to ${WIDGET_NAME}/`);
-        }
-      }
-
-      console.log(`
+  config = copyFiles(config, {
+    targetDir: WIDGET_NAME,
+    files: WIDGET_FILES,
+    label: `
 ┌─────────────────────────────────────────────────────────────────┐
 │  iOS Widget files copied to ios/${WIDGET_NAME}/         │
 │                                                                 │
@@ -49,11 +63,24 @@ function withIOSWidget(config) {
 │  4. Replace generated files with the ones in ${WIDGET_NAME}/    │
 │  5. Add App Group: ${APP_GROUP}                                 │
 └─────────────────────────────────────────────────────────────────┘
-`);
+`,
+  });
 
-      return config;
-    },
-  ]);
+  config = copyFiles(config, {
+    targetDir: '.',
+    files: APP_TARGET_FILES,
+    label: `
+┌─────────────────────────────────────────────────────────────────┐
+│  App-target native module copied to ios/                        │
+│  PomodoroUserDefaults.swift                                     │
+│                                                                 │
+│  To complete setup in Xcode:                                    │
+│  1. Open ios/*.xcworkspace                                      │
+│  2. File → Add Files to Project → select PomodoroUserDefaults   │
+│  3. Add it to the app target                                    │
+└─────────────────────────────────────────────────────────────────┘
+`,
+  });
 
   return config;
 }
