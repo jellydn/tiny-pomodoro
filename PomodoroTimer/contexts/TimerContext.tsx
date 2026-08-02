@@ -5,16 +5,7 @@ import { saveTimerState, loadTimerState, type PersistedTimerState } from '../uti
 import { DEFAULT_DURATION } from '../utils/timerState';
 import { updateWidget } from '../utils/widgetSync';
 import { createSession, reduceSession, type SessionAction, type SessionState } from '../utils/sessionEngine';
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+import { useSettings } from './SettingsContext';
 
 interface TimerContextType extends Omit<SessionState, 'endTimestamp'> {
   setDuration: (duration: number) => void;
@@ -27,8 +18,23 @@ interface TimerContextType extends Omit<SessionState, 'endTimestamp'> {
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
 
 export function TimerProvider({ children }: { children: ReactNode }) {
+  const { soundEnabled } = useSettings();
   const [session, setSession] = useState<SessionState>(() => createSession(DEFAULT_DURATION));
   const [isHydrated, setIsHydrated] = useState(false);
+
+  // Foreground notification presentation must honor the sound toggle. Registered
+  // here (not at module scope) so it re-reads the latest setting.
+  useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: soundEnabled,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }, [soundEnabled]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scheduledNotificationRef = useRef<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -75,7 +81,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       content: {
         title: 'Timer Complete! 🍅',
         body: 'Your Pomodoro session has finished.',
-        sound: true,
+        sound: soundEnabled,
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -83,7 +89,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       },
     });
     scheduledNotificationRef.current = id;
-  }, [cancelScheduledNotification]);
+  }, [cancelScheduledNotification, soundEnabled]);
 
   const commit = useCallback((next: SessionState) => {
     sessionRef.current = next;
