@@ -1,37 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList } from 'react-native';
 import { useSettings, AVAILABLE_SOUNDS, SoundOption } from '../contexts/SettingsContext';
-
-const SOUND_FREQUENCIES: Record<string, number> = {
-  bell: 880,
-  chime: 1047,
-  ding: 1319,
-  gong: 220,
-  alert: 440,
-};
-
-async function playTone(soundId: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-
-    const ctx = new AudioContext();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.frequency.value = SOUND_FREQUENCIES[soundId] || 440;
-    oscillator.type = soundId === 'gong' ? 'sine' : soundId === 'alert' ? 'square' : 'triangle';
-
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.5);
-  }
-}
+import { playSoundPreview } from '../utils/sound';
 
 export function SoundPicker() {
   const { selectedSoundId, setSelectedSoundId, soundEnabled } = useSettings();
@@ -39,16 +9,16 @@ export function SoundPicker() {
 
   const selectedSound = AVAILABLE_SOUNDS.find(s => s.id === selectedSoundId) || AVAILABLE_SOUNDS[0];
 
-  const playPreview = useCallback(async (soundId: string) => {
+  const playPreview = useCallback((soundId: string) => {
     try {
-      await playTone(soundId);
+      playSoundPreview(soundId);
     } catch (error) {
       console.error('Error playing sound:', error);
     }
   }, []);
 
-  const handleSelect = useCallback(async (soundId: string) => {
-    await playPreview(soundId);
+  const handleSelect = useCallback((soundId: string) => {
+    playPreview(soundId);
     setSelectedSoundId(soundId);
     setModalVisible(false);
   }, [playPreview, setSelectedSoundId]);
