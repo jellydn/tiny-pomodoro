@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
-import { PomodoroWidget } from './PomodoroWidget';
+import { PomodoroWidget } from './androidPomodoroWidget';
 import {
   loadTimerState,
   saveTimerState,

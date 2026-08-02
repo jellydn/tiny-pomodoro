@@ -10,6 +10,6 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps): Promise<
   if (Platform.OS !== 'android') {
     return;
   }
-  const { runWidgetTaskHandler } = await import('./widgetTaskHandler.android');
+  const { runWidgetTaskHandler } = await import('./androidWidgetTaskHandler');
   await runWidgetTaskHandler(props);
 }

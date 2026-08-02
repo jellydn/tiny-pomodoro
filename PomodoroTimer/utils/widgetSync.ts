@@ -15,7 +15,7 @@ export async function updateWidget(
 ): Promise<void> {
   if (Platform.OS === 'android') {
     const { requestWidgetUpdate } = await import('react-native-android-widget');
-    const { PomodoroWidget } = await import('../widgets/PomodoroWidget');
+    const { PomodoroWidget } = await import('../widgets/androidPomodoroWidget');
 
     requestWidgetUpdate({
       widgetName: 'PomodoroWidget',
