@@ -13,7 +13,7 @@ const WIDGET_FILES = [
 ];
 
 // Files that belong to the main app target (copied to ios/).
-const APP_TARGET_FILES = ['PomodoroUserDefaults.swift'];
+const APP_TARGET_FILES = ['PomodoroUserDefaults.swift', 'WidgetCenterModule.swift'];
 
 function copyFiles(config, { targetDir, files, label }) {
   return withDangerousMod(config, [
@@ -71,13 +71,13 @@ function withIOSWidget(config) {
     files: APP_TARGET_FILES,
     label: `
 ┌─────────────────────────────────────────────────────────────────┐
-│  App-target native module copied to ios/                        │
-│  PomodoroUserDefaults.swift                                     │
+│  App-target native modules copied to ios/                      │
+│  PomodoroUserDefaults.swift · WidgetCenterModule.swift         │
 │                                                                 │
 │  To complete setup in Xcode:                                    │
 │  1. Open ios/*.xcworkspace                                      │
-│  2. File → Add Files to Project → select PomodoroUserDefaults   │
-│  3. Add it to the app target                                    │
+│  2. File → Add Files to Project → select both Swift files       │
+│  3. Add them to the app target                                  │
 └─────────────────────────────────────────────────────────────────┘
 `,
   });
