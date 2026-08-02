@@ -1,18 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export interface SoundOption {
-  id: string;
-  name: string;
-}
-
-export const AVAILABLE_SOUNDS: SoundOption[] = [
-  { id: 'bell', name: 'Bell' },
-  { id: 'chime', name: 'Chime' },
-  { id: 'ding', name: 'Ding' },
-  { id: 'gong', name: 'Gong' },
-  { id: 'alert', name: 'Alert' },
-];
+export { AVAILABLE_SOUNDS, type SoundOption } from '../utils/sound';
 
 interface SettingsState {
   soundEnabled: boolean;

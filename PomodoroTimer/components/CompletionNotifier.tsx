@@ -2,35 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Platform, Vibration } from 'react-native';
 import { useTimer } from '../contexts/TimerContext';
 import { useSettings } from '../contexts/SettingsContext';
-
-const SOUND_FREQUENCIES: Record<string, number> = {
-  bell: 800,
-  chime: 1000,
-  ding: 1200,
-  gong: 400,
-  alert: 600,
-};
-
-function playWebAudioSound(soundId: string) {
-  if (typeof window === 'undefined' || !window.AudioContext) return;
-  
-  const frequency = SOUND_FREQUENCIES[soundId] || 800;
-  const audioContext = new window.AudioContext();
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
-  
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  
-  oscillator.frequency.value = frequency;
-  oscillator.type = 'sine';
-  
-  gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
-  
-  oscillator.start(audioContext.currentTime);
-  oscillator.stop(audioContext.currentTime + 1);
-}
+import { playCompletionSound } from '../utils/sound';
 
 export function CompletionNotifier() {
   const { isCompleted } = useTimer();
@@ -43,7 +15,7 @@ export function CompletionNotifier() {
       
       if (soundEnabled) {
         if (Platform.OS === 'web') {
-          playWebAudioSound(selectedSoundId);
+          playCompletionSound(selectedSoundId);
         }
       }
       
