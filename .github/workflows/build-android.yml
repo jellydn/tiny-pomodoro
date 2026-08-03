@@ -32,11 +32,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Install dependencies
         run: bun install
-
-      - name: Setup EAS CLI
-        run: bun add -g eas-cli
 
       - name: Extract version from tag
         id: version
@@ -47,18 +50,15 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build Android APK
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          npx eas-cli build --platform android --profile development --non-interactive --wait
+      - name: Generate native project
+        run: npx expo prebuild --platform android --no-install
 
-      - name: Download APK from EAS
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          BUILD_URL=$(npx eas-cli build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
-          curl -L -o PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk "$BUILD_URL"
+      - name: Build release APK
+        working-directory: PomodoroTimer/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Copy APK with version name
+        run: cp android/app/build/outputs/apk/release/app-release.apk PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
