@@ -43,7 +43,11 @@ jobs:
           # account, signing, or provisioning needed. This is the free
           # distribution path; a signed IPA for real devices requires a paid
           # Apple Developer account (see README for the sideloading options).
-          npx eas-cli build --platform ios --profile simulator --non-interactive --wait --json > build-result.json
+          # eas-cli is installed globally by the setup action (bun add -g
+          # eas-cli) and resolved via PATH. npx would NOT find it (npx does
+          # not scan PATH for globally-installed bins) and would re-download
+          # it from the registry instead.
+          eas-cli build --platform ios --profile simulator --non-interactive --wait --json > build-result.json
           BUILD_ID=$(jq -r '.id // empty' build-result.json)
           echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "Built with ID: $BUILD_ID"

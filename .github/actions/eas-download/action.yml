@@ -29,13 +29,16 @@ runs:
       run: |
         # Composite actions cannot use `working-directory`, so cd explicitly.
         cd PomodoroTimer
+        # eas-cli is installed globally by the setup action and resolved via
+        # PATH. npx would not find it (npx does not scan PATH for global bins)
+        # and would re-download it from the registry instead.
         BUILD_URL=""
         if [ -n "${{ inputs.build_id }}" ]; then
-          BUILD_URL=$(npx eas-cli build:view "${{ inputs.build_id }}" --json 2>/dev/null | jq -r '.artifacts.buildUrl // empty')
+          BUILD_URL=$(eas-cli build:view "${{ inputs.build_id }}" --json 2>/dev/null | jq -r '.artifacts.buildUrl // empty')
         fi
         if [ -z "$BUILD_URL" ]; then
           # Fallback: most recent finished build for this platform/profile.
-          BUILD_URL=$(npx eas-cli build:list --platform "${{ inputs.platform }}" --profile "${{ inputs.profile }}" --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl // empty')
+          BUILD_URL=$(eas-cli build:list --platform "${{ inputs.platform }}" --profile "${{ inputs.profile }}" --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl // empty')
         fi
         if [ -z "$BUILD_URL" ]; then
           echo "::error::Could not resolve EAS artifact URL"
