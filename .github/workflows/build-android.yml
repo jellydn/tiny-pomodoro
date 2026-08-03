@@ -59,7 +59,15 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: npx expo prebuild --platform android --no-install
+        run: |
+          # Tag releases must ship with the production keystore. Fail fast if
+          # any signing input is missing so we never publish a debug-signed APK.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            for v in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+              [ -n "${!v:-}" ] || { echo "FAIL: tag release requires $v"; exit 1; }
+            done
+          fi
+          npx expo prebuild --platform android --no-install
 
       - name: Build release APK
         working-directory: PomodoroTimer/android
@@ -101,6 +109,18 @@ jobs:
           cat /tmp/apksigner.txt
           grep -q "Verifies" /tmp/apksigner.txt || { echo "FAIL: apksigner did not verify the APK"; exit 1; }
           echo "PASS: signature OK"
+
+          # On tag releases, assert the APK carries the production certificate.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            EXPECTED_CERT="${{ vars.ANDROID_RELEASE_CERT_SHA256 }}"
+            if [ -z "$EXPECTED_CERT" ]; then
+              echo "FAIL: ANDROID_RELEASE_CERT_SHA256 repo variable not set"; exit 1
+            fi
+            if ! grep -qi "$EXPECTED_CERT" /tmp/apksigner.txt; then
+              echo "FAIL: APK not signed with the production certificate (expected $EXPECTED_CERT)"; exit 1
+            fi
+            echo "PASS: signed with production certificate"
+          fi
 
           echo "--- zipalign check ---"
           if ! "$BT/zipalign" -c -v 4 "$APK" > /tmp/zipalign.txt; then

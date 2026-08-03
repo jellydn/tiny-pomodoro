@@ -23,6 +23,7 @@ function isConfigured() {
 // debug-signed "release" APK.
 function patchReleaseSigning(contents) {
   // 1. Add a `release` signingConfig after the template's debug block.
+  // Idempotent: skip if a release signingConfig already exists (re-prebuild).
   const debugBlock = `        debug {
             storeFile file('debug.keystore')
             storePassword 'android'
@@ -37,12 +38,15 @@ function patchReleaseSigning(contents) {
             keyPassword RELEASE_KEY_PASSWORD
         }`;
 
-  if (!contents.includes(debugBlock)) {
-    throw new Error('withAndroidSigning: template debug signingConfig block not found');
+  if (!contents.includes('signingConfigs.release')) {
+    if (!contents.includes(debugBlock)) {
+      throw new Error('withAndroidSigning: template debug signingConfig block not found');
+    }
+    contents = contents.replace(debugBlock, releaseConfigBlock);
   }
-  contents = contents.replace(debugBlock, releaseConfigBlock);
 
   // 2. Point the release buildType at the release signingConfig.
+  // Idempotent: skip if it already points at signingConfigs.release.
   const releaseDebugSigning = `        release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
@@ -50,10 +54,12 @@ function patchReleaseSigning(contents) {
   const releaseProdSigning = `        release {
             signingConfig signingConfigs.release`;
 
-  if (!contents.includes(releaseDebugSigning)) {
-    throw new Error('withAndroidSigning: template release signingConfig line not found');
+  if (!contents.includes('signingConfig signingConfigs.release')) {
+    if (!contents.includes(releaseDebugSigning)) {
+      throw new Error('withAndroidSigning: template release signingConfig line not found');
+    }
+    contents = contents.replace(releaseDebugSigning, releaseProdSigning);
   }
-  contents = contents.replace(releaseDebugSigning, releaseProdSigning);
 
   return contents;
 }
@@ -76,13 +82,17 @@ function withAndroidSigning(config) {
   });
 
   // 2. Inject signing properties into android/gradle.properties.
+  // Idempotent: replace existing RELEASE_* props instead of duplicating them.
+  // Guard p.key — re-read files can include comment/blank entries without a key.
   config = withGradleProperties(config, (cfg) => {
-    cfg.modResults.push(
+    const props = cfg.modResults.filter((p) => !(p.key || '').startsWith('RELEASE_'));
+    props.push(
       { type: 'property', key: 'RELEASE_STORE_FILE', value: 'release.keystore' },
       { type: 'property', key: 'RELEASE_STORE_PASSWORD', value: process.env.ANDROID_KEYSTORE_PASSWORD },
       { type: 'property', key: 'RELEASE_KEY_ALIAS', value: process.env.ANDROID_KEY_ALIAS },
       { type: 'property', key: 'RELEASE_KEY_PASSWORD', value: process.env.ANDROID_KEY_PASSWORD }
     );
+    cfg.modResults = props;
     return cfg;
   });
 
