@@ -4,6 +4,11 @@
 // the Android widget task handler drive one engine instead of hand-writing
 // start/pause/stop/reset in two places. It has no I/O and no React imports —
 // side effects (persistence, notifications, widget sync) live in the callers.
+//
+// Wall-clock math (computeRemaining) and the persisted-state contract live in
+// ./timerState; this module depends on that one seam.
+
+import { computeRemaining, DEFAULT_DURATION, type PersistedTimerState } from './timerState';
 
 export interface SessionState {
   duration: number;
@@ -33,6 +38,21 @@ export function createSession(duration: number): SessionState {
     isPaused: false,
     isCompleted: false,
     endTimestamp: null,
+  };
+}
+
+// Adapter: build a live session from the persisted contract. Both the app and
+// the Android widget task handler used to hand-roll this field-by-field
+// mapping; it now lives once beside the engine so a contract change can't
+// silently drift the two drivers apart.
+export function hydrateSession(stored: PersistedTimerState): SessionState {
+  return {
+    duration: stored.duration ?? DEFAULT_DURATION,
+    remaining: stored.remaining,
+    isRunning: stored.isRunning,
+    isPaused: stored.isPaused,
+    isCompleted: stored.isCompleted,
+    endTimestamp: stored.endTimestamp,
   };
 }
 
@@ -86,8 +106,8 @@ export function reduceSession(state: SessionState, action: SessionAction): Sessi
 
     case 'reconcile': {
       if (!state.isRunning || !state.endTimestamp) return state;
-      const remaining = Math.max(0, Math.ceil((state.endTimestamp - action.now) / 1000));
-      if (remaining <= 0) {
+      const next = computeRemaining(state, action.now);
+      if (next.isCompleted) {
         return {
           ...state,
           remaining: 0,
@@ -97,7 +117,7 @@ export function reduceSession(state: SessionState, action: SessionAction): Sessi
           endTimestamp: null,
         };
       }
-      return { ...state, remaining };
+      return { ...state, remaining: next.remaining };
     }
   }
 }
