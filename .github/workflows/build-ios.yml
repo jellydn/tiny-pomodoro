@@ -1,4 +1,4 @@
-name: Build iOS IPA
+name: Build iOS Simulator App
 
 on:
   push:
@@ -11,9 +11,12 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     defaults:
       run:
         working-directory: PomodoroTimer
@@ -35,9 +38,6 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Setup EAS CLI
-        run: bun add -g eas-cli
-
       - name: Extract version from tag
         id: version
         run: |
@@ -47,43 +47,56 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build iOS Simulator
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          npx eas-cli build --platform ios --profile simulator --non-interactive --wait
+      - name: Generate native project
+        run: npx expo prebuild --platform ios --no-install
 
-      - name: Download IPA from EAS
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Install CocoaPods dependencies
+        run: cd ios && pod install
+
+      - name: Build simulator app (unsigned, no Apple account needed)
         run: |
-          BUILD_URL=$(npx eas-cli build:list --platform ios --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
-          curl -L -o PomodoroTimer-${{ steps.version.outputs.VERSION }}.ipa "$BUILD_URL"
+          xcodebuild \
+            -workspace ios/TinyPomodoro.xcworkspace \
+            -scheme TinyPomodoro \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -arch arm64 \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package .app into zip
+        run: |
+          APP="build/Build/Products/Release-iphonesimulator/TinyPomodoro.app"
+          test -d "$APP" && echo "found $APP"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.zip"
+          ls -la "PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}.ipa
+          files: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.zip
           body: |
             ## PomodoroTimer v${{ steps.version.outputs.VERSION }}
-            
+
             ### Download
-            - **iOS IPA**: Download the attached IPA file
-            
-            ### Sideloading (iOS)
-            Use one of these tools to sideload the IPA to your iPhone:
-            - [AltStore](https://altstore.io/) - Recommended
-            - [Sideloadly](https://sideloadly.io/)
-            - [SideStore](https://sidestore.io/)
-            
-            **Note:** Sideloaded apps need to be refreshed every 7 days with a free Apple ID.
+            - **Android APK**: build via the Build Android APK workflow
+            - **iOS Simulator app**: attached zip — unsigned simulator build, **no Apple Developer account required**
+
+            ### Run the iOS app (requires Apple Silicon Mac)
+            1. Download and unzip `PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.zip`
+            2. Open the Simulator: `open -a Simulator`
+            3. Install: `xcrun simctl install booted <path>/TinyPomodoro.app`
+            4. Launch: `xcrun simctl launch booted com.pomodorotimer.app`
+
+            **Note:** This is a simulator build (arm64). It runs on Apple Silicon Macs in the iOS Simulator and cannot be installed on a physical iPhone — that requires Apple's signing (paid account or a local free personal team).
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload IPA artifact (manual runs)
+      - name: Upload simulator app artifact (manual runs)
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: PomodoroTimer-${{ steps.version.outputs.VERSION }}.ipa
-          path: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}.ipa
+          name: PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.zip
+          path: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.zip
