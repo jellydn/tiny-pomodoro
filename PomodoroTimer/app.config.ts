@@ -54,6 +54,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     web: {
       favicon: './assets/favicon.png',
+      // PWA installability metadata. The app shell (manifest.json, icons,
+      // service worker) ships from public/ — these fields drive the HTML
+      // template (title, theme-color, description) and keep the config in
+      // sync with public/manifest.json.
+      name: 'Tiny Pomodoro',
+      shortName: 'Pomodoro',
+      description: 'A minimalist Pomodoro timer with sounds, vibration, and home screen widgets.',
+      lang: 'en',
+      themeColor: '#007AFF',
+      backgroundColor: '#ffffff',
+      display: 'standalone',
+      orientation: 'portrait',
+      startUrl: '.',
+      scope: '.',
     },
     extra: {
       eas: {

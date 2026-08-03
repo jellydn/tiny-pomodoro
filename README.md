@@ -22,11 +22,26 @@
 
 ## Download
 
-### Web app (works everywhere — no install, no Apple account)
+### Web app (works everywhere — installable PWA, no Apple account)
 
 [![Web App](https://img.shields.io/badge/Web-PWA-8A2BE2?style=for-the-badge&logo=web)](https://jellydn.github.io/tiny-pomodoro/)
 
 Runs in any browser on any device. Free, always up to date with `main`.
+
+It's a true PWA — **Add to Home Screen** from Chrome (desktop or Android) or
+Safari (iOS) to launch it full-screen like a native app, with an offline app
+shell so it still opens without a connection.
+
+- **Chrome / Android**: use the address-bar install icon, or Menu → "Install app"
+- **Safari / iOS**: tap **Share** → **Add to Home Screen**
+
+To develop the web PWA locally:
+
+```sh
+cd PomodoroTimer
+npx expo export --platform web   # rebuilds dist/ from public/ + app code
+python3 -m http.server 8937 -d dist   # serve it, then open http://localhost:8937
+```
 
 ### Android
 
