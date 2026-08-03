@@ -14,6 +14,14 @@ on:
 permissions:
   contents: write
 
+# EAS Build free tier allows only ONE concurrent build. The Android and iOS
+# workflows submit to the same EAS account from the same tag push, so serialize
+# them here (Actions-level queue) instead of hitting EAS concurrently and
+# having one build rejected.
+concurrency:
+  group: eas-native-builds
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -57,7 +65,8 @@ jobs:
           # which neither scans PATH for global bins nor has a bin matching
           # the package name, and would re-download the CLI from the registry.
           eas build --platform ios --profile simulator --non-interactive --wait --json > build-result.json
-          BUILD_ID=$(jq -r '.id // empty' build-result.json)
+          # `eas build --json` prints an ARRAY of builds, so index [0].
+          BUILD_ID=$(jq -r '.[0].id // empty' build-result.json)
           echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "Built with ID: $BUILD_ID"
 

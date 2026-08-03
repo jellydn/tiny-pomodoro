@@ -14,6 +14,14 @@ on:
 permissions:
   contents: write
 
+# EAS Build free tier allows only ONE concurrent build. The Android and iOS
+# workflows submit to the same EAS account from the same tag push, so serialize
+# them here (Actions-level queue) instead of hitting EAS concurrently and
+# having one build rejected.
+concurrency:
+  group: eas-native-builds
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -54,8 +62,22 @@ jobs:
           # action and resolved via PATH. Invoking `eas` directly avoids npx,
           # which neither scans PATH for global bins nor has a bin matching
           # the package name, and would re-download the CLI from the registry.
+          set +e
           eas build --platform android --profile preview --non-interactive --wait --json > build-result.json
-          BUILD_ID=$(jq -r '.id // empty' build-result.json)
+          EAS_EXIT=$?
+          set -e
+          if [ $EAS_EXIT -ne 0 ]; then
+            # Surface the EAS-side failure reason in CI logs so a failed build
+            # is diagnosable without logging into the Expo dashboard.
+            echo "::group::EAS build failure detail"
+            cat build-result.json 2>/dev/null || true
+            eas build:list --platform android --profile preview --limit 2 --json 2>/dev/null \
+              | jq -r '.[] | "\(.id) status=\(.status) error=\(.error // \"none\")"' 2>/dev/null || true
+            echo "::endgroup::"
+            exit $EAS_EXIT
+          fi
+          # `eas build --json` prints an ARRAY of builds, so index [0].
+          BUILD_ID=$(jq -r '.[0].id // empty' build-result.json)
           echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "Built with ID: $BUILD_ID"
 
