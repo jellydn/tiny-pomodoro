@@ -26,8 +26,12 @@ jobs:
         run: |
           if [ -n "${{ github.event.inputs.version }}" ]; then
             echo "VERSION=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
+          elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            # workflow_dispatch runs on a branch ref (no tag) — use a safe,
+            # slash-free version instead of the raw ref.
+            echo "VERSION=manual" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build Android Release APK
