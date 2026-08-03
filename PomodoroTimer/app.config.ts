@@ -2,6 +2,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const plugins: ExpoConfig['plugins'] = [
+    './plugins/android-signing/withAndroidSigning',
     './plugins/ios-widget/withIOSWidget',
   ];
 
