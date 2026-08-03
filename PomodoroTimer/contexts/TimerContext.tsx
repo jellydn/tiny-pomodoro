@@ -4,7 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { saveTimerState, loadTimerState, type PersistedTimerState } from '../utils/timerStorage';
 import { DEFAULT_DURATION } from '../utils/timerState';
 import { updateWidget } from '../utils/widgetSync';
-import { createSession, reduceSession, type SessionAction, type SessionState } from '../utils/sessionEngine';
+import { createSession, hydrateSession, reduceSession, type SessionAction, type SessionState } from '../utils/sessionEngine';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -128,15 +128,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     (async () => {
       const storedState = await loadTimerState();
       if (storedState) {
-        const base: SessionState = {
-          duration: storedState.duration ?? DEFAULT_DURATION,
-          remaining: storedState.remaining,
-          isRunning: storedState.isRunning,
-          isPaused: storedState.isPaused,
-          isCompleted: storedState.isCompleted,
-          endTimestamp: storedState.endTimestamp,
-        };
-        const reconciled = reduceSession(base, { type: 'reconcile', now: Date.now() });
+        const reconciled = reduceSession(hydrateSession(storedState), { type: 'reconcile', now: Date.now() });
         commit(reconciled);
         if (reconciled.isCompleted && !storedState.isCompleted) {
           persistState(reconciled);
