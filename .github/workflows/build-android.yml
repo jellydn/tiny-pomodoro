@@ -71,8 +71,14 @@ jobs:
             # is diagnosable without logging into the Expo dashboard.
             echo "::group::EAS build failure detail"
             cat build-result.json 2>/dev/null || true
-            eas build:list --platform android --profile preview --limit 2 --json 2>/dev/null \
-              | jq -r '.[] | "\(.id) status=\(.status) error=\(.error // \"none\")"' 2>/dev/null || true
+            # Print the tail of the EAS Gradle log (the signed URL is fresh
+            # right after --wait fails) to capture the real error.
+            LOG_URL=$(jq -r '.[0].logFiles[0] // empty' build-result.json 2>/dev/null)
+            if [ -n "$LOG_URL" ]; then
+              echo "::group::EAS Gradle log tail"
+              curl -s "$LOG_URL" | tail -150 || true
+              echo "::endgroup::"
+            fi
             echo "::endgroup::"
             exit $EAS_EXIT
           fi
