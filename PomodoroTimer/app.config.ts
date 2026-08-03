@@ -55,6 +55,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
     },
+    experiments: {
+      // GitHub Pages serves this app from /tiny-pomodoro/. Keep local exports
+      // root-relative unless a deployment explicitly supplies a base path.
+      baseUrl: process.env.EXPO_BASE_URL ?? '',
+    },
     web: {
       favicon: './assets/favicon.png',
       // PWA installability metadata. The app shell (manifest.json, icons,

@@ -39,10 +39,13 @@ To develop the web PWA locally:
 
 ```sh
 cd PomodoroTimer
-npx expo export --platform web   # rebuilds dist/ from public/ + app code
+npx expo export --platform web
+cp public/manifest.json dist/manifest.json
+cp public/sw.js dist/sw.js
+cp -R public/icons dist/icons
 python3 -m http.server 8937 -d dist   # serve it, then open http://localhost:8937
 ```
-)
+
 ### Android
 
 [![Download APK](https://img.shields.io/badge/Download-APK-green?style=for-the-badge&logo=android)](https://github.com/jellydn/tiny-pomodoro/releases/latest)
