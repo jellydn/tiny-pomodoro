@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { useSettings } from '../contexts/SettingsContext';
+import { canDisableSound, canDisableVibration } from '../utils/settingsState';
 import { SoundPicker } from './SoundPicker';
 
 interface SettingsScreenProps {
@@ -10,8 +11,8 @@ interface SettingsScreenProps {
 export function SettingsScreen({ onBack }: SettingsScreenProps) {
   const { soundEnabled, vibrationEnabled, setSoundEnabled, setVibrationEnabled } = useSettings();
 
-  const canDisableSound = vibrationEnabled;
-  const canDisableVibration = soundEnabled;
+  const soundSwitchDisabled = !canDisableSound({ vibrationEnabled });
+  const vibrationSwitchDisabled = !canDisableVibration({ soundEnabled });
 
   return (
     <View style={styles.container}>
@@ -34,7 +35,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
           <Switch
             value={soundEnabled}
             onValueChange={setSoundEnabled}
-            disabled={!canDisableSound}
+            disabled={soundSwitchDisabled}
             trackColor={{ false: '#767577', true: '#81b0ff' }}
             thumbColor={soundEnabled ? '#007AFF' : '#f4f3f4'}
           />
@@ -52,7 +53,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
           <Switch
             value={vibrationEnabled}
             onValueChange={setVibrationEnabled}
-            disabled={!canDisableVibration}
+            disabled={vibrationSwitchDisabled}
             trackColor={{ false: '#767577', true: '#81b0ff' }}
             thumbColor={vibrationEnabled ? '#007AFF' : '#f4f3f4'}
           />
