@@ -1,4 +1,4 @@
-name: Build iOS IPA
+name: Build iOS Simulator
 
 on:
   push:
@@ -48,42 +48,65 @@ jobs:
           fi
 
       - name: Build iOS Simulator
+        id: build
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          npx eas-cli build --platform ios --profile simulator --non-interactive --wait
+          # simulator profile builds an unsigned .app bundle (packaged as a
+          # .tar.gz) that runs in Xcode's iOS Simulator — no Apple Developer
+          # account, signing, or provisioning needed. This is the free
+          # distribution path; a signed IPA for real devices requires a paid
+          # Apple Developer account (see README for the sideloading options).
+          npx eas-cli build --platform ios --profile simulator --non-interactive --wait --json > build-result.json
+          BUILD_ID=$(jq -r '.id // empty' build-result.json)
+          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "Built with ID: $BUILD_ID"
 
-      - name: Download IPA from EAS
+      - name: Download simulator build from EAS
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          BUILD_URL=$(npx eas-cli build:list --platform ios --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
-          curl -L -o PomodoroTimer-${{ steps.version.outputs.VERSION }}.ipa "$BUILD_URL"
+          if [ -n "${{ steps.build.outputs.BUILD_ID }}" ]; then
+            BUILD_URL=$(npx eas-cli build:view "${{ steps.build.outputs.BUILD_ID }}" --json 2>/dev/null | jq -r '.artifacts.buildUrl // empty')
+          fi
+          if [ -z "$BUILD_URL" ]; then
+            # Fallback: most recent finished simulator build for iOS.
+            BUILD_URL=$(npx eas-cli build:list --platform ios --profile simulator --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl // empty')
+          fi
+          if [ -z "$BUILD_URL" ]; then
+            echo "::error::Could not resolve EAS artifact URL"
+            exit 1
+          fi
+          curl -L -o PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.tar.gz "$BUILD_URL"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}.ipa
+          files: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.tar.gz
           body: |
             ## PomodoroTimer v${{ steps.version.outputs.VERSION }}
-            
-            ### Download
-            - **iOS IPA**: Download the attached IPA file
-            
-            ### Sideloading (iOS)
-            Use one of these tools to sideload the IPA to your iPhone:
-            - [AltStore](https://altstore.io/) - Recommended
-            - [Sideloadly](https://sideloadly.io/)
-            - [SideStore](https://sidestore.io/)
-            
-            **Note:** Sideloaded apps need to be refreshed every 7 days with a free Apple ID.
+
+            ### iOS Simulator build (free — no Apple Developer account needed)
+            Download the attached `.tar.gz`, unzip it, and either:
+            - Drag the `.app` onto an open Xcode Simulator window, or
+            - Run `xcrun simctl install booted <path-to>.app` from the terminal
+
+            **Note:** This is an iOS Simulator build. It runs on a Mac with Xcode's iOS Simulator — it cannot be installed on a physical iPhone.
+
+            ### Running on a physical iPhone (free)
+            - **Web app**: https://jellydn.github.io/tiny-pomodoro/ (any browser)
+            - **Sideloading**: build locally with Xcode + free Apple ID (Personal Team), or use AltStore / Sideloadly — apps signed with a free Apple ID must be refreshed every 7 days
+            - **TestFlight / App Store**: requires a paid Apple Developer account ($99/yr)
+
+            ### Android
+            See the Android release for the APK.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload IPA artifact (manual runs)
+      - name: Upload simulator build artifact (manual runs)
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: PomodoroTimer-${{ steps.version.outputs.VERSION }}.ipa
-          path: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}.ipa
+          name: PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.tar.gz
+          path: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}-ios-simulator.tar.gz

@@ -1,0 +1,70 @@
+name: Deploy Web PWA
+
+# Free, universal distribution: the app exports to a static web app that runs
+# in any browser on any device — no Apple Developer account, no app store.
+# Deploys to GitHub Pages (Settings → Pages → Source: GitHub Actions).
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: PomodoroTimer
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Export web build
+        run: npx expo export --platform web
+
+      - name: Rewrite asset paths for GitHub Pages subpath
+        run: |
+          # expo export emits absolute paths (/favicon.ico, /_expo/...), which
+          # break when Pages serves the site under /<repo>/. Rewrite to
+          # relative paths so the PWA works at any base URL.
+          sed -i 's|href="/|href="./|g; s|src="/|src="./|g' dist/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: PomodoroTimer/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -47,17 +47,34 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build Android APK
+      - name: Build Android Release APK
+        id: build
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          npx eas-cli build --platform android --profile development --non-interactive --wait
+          # preview profile builds a standalone release APK (buildType: apk).
+          # The --json output lets us capture the exact build ID so we can
+          # download THIS build, not whatever build:list happens to return.
+          npx eas-cli build --platform android --profile preview --non-interactive --wait --json > build-result.json
+          BUILD_ID=$(jq -r '.id // empty' build-result.json)
+          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "Built with ID: $BUILD_ID"
 
       - name: Download APK from EAS
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          BUILD_URL=$(npx eas-cli build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+          if [ -n "${{ steps.build.outputs.BUILD_ID }}" ]; then
+            BUILD_URL=$(npx eas-cli build:view "${{ steps.build.outputs.BUILD_ID }}" --json 2>/dev/null | jq -r '.artifacts.buildUrl // empty')
+          fi
+          if [ -z "$BUILD_URL" ]; then
+            # Fallback: most recent finished preview build for Android.
+            BUILD_URL=$(npx eas-cli build:list --platform android --profile preview --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl // empty')
+          fi
+          if [ -z "$BUILD_URL" ]; then
+            echo "::error::Could not resolve EAS artifact URL"
+            exit 1
+          fi
           curl -L -o PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk "$BUILD_URL"
 
       - name: Create GitHub Release
@@ -67,15 +84,19 @@ jobs:
           files: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk
           body: |
             ## PomodoroTimer v${{ steps.version.outputs.VERSION }}
-            
+
             ### Download
-            - **Android APK**: Download the attached APK file
-            - **iOS**: Build locally using Xcode (see README)
-            
+            - **Android APK**: Download the attached APK file (free, sideloadable — no Play Store needed)
+
             ### Installation (Android)
             1. Download the APK file
             2. Enable "Install from unknown sources" in Settings
             3. Open the APK to install
+
+            ### iOS / Web (free options — no Apple Developer account needed)
+            - **Web app**: https://jellydn.github.io/tiny-pomodoro/ (works in any browser)
+            - **iOS Simulator build**: attached to the iOS release or build locally with Xcode (see README)
+            - **iPhone sideloading**: use AltStore / Sideloadly with a free Apple ID (refreshed every 7 days)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

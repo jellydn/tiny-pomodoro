@@ -22,6 +22,12 @@
 
 ## Download
 
+### Web app (works everywhere — no install, no Apple account)
+
+[![Web App](https://img.shields.io/badge/Web-PWA-8A2BE2?style=for-the-badge&logo=web)](https://jellydn.github.io/tiny-pomodoro/)
+
+Runs in any browser on any device. Free, always up to date with `main`.
+
 ### Android
 
 [![Download APK](https://img.shields.io/badge/Download-APK-green?style=for-the-badge&logo=android)](https://github.com/jellydn/tiny-pomodoro/releases/latest)
@@ -39,19 +45,24 @@
 
 ### iOS
 
-[![Download IPA](https://img.shields.io/badge/Download-IPA-blue?style=for-the-badge&logo=apple)](https://github.com/jellydn/tiny-pomodoro/releases/latest)
+> No paid Apple Developer account ($99/yr) is required for any of these options.
 
-**Sideloading:**
+**Option A — iOS Simulator build (free):**
 
-Use one of these tools to install the IPA on your iPhone:
+[![Download Simulator Build](https://img.shields.io/badge/Download-Simulator-007AFF?style=for-the-badge&logo=apple)](https://github.com/jellydn/tiny-pomodoro/releases/latest)
 
-- [AltStore](https://altstore.io/) - Recommended
-- [Sideloadly](https://sideloadly.io/)
-- [SideStore](https://sidestore.io/)
+1. Download the `.tar.gz` from [Releases](../../releases/latest)
+2. Unzip it
+3. Drag the `.app` onto an open Xcode Simulator window, or run:
+   ```sh
+   xcrun simctl install booted path/to/TinyPomodoro.app
+   ```
 
-> ⚠️ Sideloaded apps need to be refreshed every 7 days with a free Apple ID
+This runs on a Mac with Xcode's iOS Simulator — it cannot be installed on a physical iPhone.
 
-**Or build locally with Xcode:**
+**Option B — Run on your physical iPhone (free, 7-day refresh):**
+
+Build locally with Xcode using your free Apple ID:
 
 1. Clone this repository
 2. `cd PomodoroTimer`
@@ -60,6 +71,12 @@ Use one of these tools to install the IPA on your iPhone:
 5. Select your iPhone as the target device
 6. In Signing & Capabilities, select your Apple ID as "Personal Team"
 7. Press ⌘R to build and run
+
+Alternatively use [AltStore](https://altstore.io/), [Sideloadly](https://sideloadly.io/), or [SideStore](https://sidestore.io/) with a free Apple ID.
+
+> ⚠️ Apps signed with a free Apple ID expire after 7 days and must be refreshed (AltStore/SideStore automate this).
+
+**Option C — TestFlight / App Store:** Requires a paid Apple Developer account. The CI workflow is ready for this once you add one.
 
 ## Prerequisites
 
@@ -98,26 +115,39 @@ npx tsc --noEmit
 
 ### Automatic (via GitHub Actions)
 
-1. Create and push a git tag:
+1. Bump `version` in `PomodoroTimer/app.config.ts`
+2. Create and push a git tag:
    ```sh
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v1.0.1
+   git push origin v1.0.1
    ```
-2. GitHub Actions will build the APK/IPA and create a release automatically
+3. GitHub Actions will:
+   - Build the **Android release APK** and attach it to a GitHub Release
+   - Build the **iOS Simulator** `.tar.gz` and attach it to the same Release
+   - Deploy the **web PWA** to GitHub Pages
 
 ### Manual Build
 
 ```sh
-# Build Android APK
+# Build Android release APK (standalone, sideloadable)
 npx eas build --platform android --profile preview
 
-# Build iOS IPA
-npx eas build --platform ios --profile preview
+# Build iOS Simulator bundle (free, no Apple Developer account)
+npx eas build --platform ios --profile simulator
 
-# Build for production (requires accounts)
+# Build for production stores (requires paid accounts)
 npx eas build --platform android --profile production
 npx eas build --platform ios --profile production
 ```
+
+### iOS distribution matrix
+
+| Goal | Cost | How |
+| --- | --- | --- |
+| Use in any browser | Free | Web PWA (GitHub Pages) |
+| Run in iOS Simulator | Free | EAS `simulator` profile → `.tar.gz` |
+| Physical iPhone | Free (7-day refresh) | Local Xcode build with free Apple ID, or AltStore/Sideloadly |
+| TestFlight / App Store | $99/yr | EAS `production` profile + Apple Developer account |
 
 ## Setup for CI/CD
 
