@@ -1,12 +1,9 @@
 name: Setup build environment
-description: Checkout, install Node/Bun and dependencies, and install the EAS CLI. Shared by all build workflows.
+description: Install Node/Bun and dependencies, and install the EAS CLI. Shared by all build workflows. Callers are responsible for actions/checkout before using this action (local composite actions cannot load without the repo on disk).
 
 runs:
   using: composite
   steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:

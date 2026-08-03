@@ -25,6 +25,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Local composite actions (./.github/actions/*) can only be loaded once
+      # the repository is on disk — checkout must come first.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup build environment
         uses: ./.github/actions/setup
 
