@@ -26,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'Tiny Pomodoro',
     slug: 'tiny-pomodoro',
-    version: '1.0.0',
+    version: '1.0.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
