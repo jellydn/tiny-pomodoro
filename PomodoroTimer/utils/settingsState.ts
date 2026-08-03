@@ -54,14 +54,3 @@ export function reduceSettings(state: SettingsState, patch: SettingsPatch): Sett
   }
   return next;
 }
-
-// UI helpers: whether the Sound / Vibration switch may be turned off. Derived
-// from the same rule the reducer enforces, so a disabled switch and a rejected
-// patch can never disagree.
-export function canDisableSound(state: Pick<SettingsState, 'vibrationEnabled'>): boolean {
-  return state.vibrationEnabled;
-}
-
-export function canDisableVibration(state: Pick<SettingsState, 'soundEnabled'>): boolean {
-  return state.soundEnabled;
-}

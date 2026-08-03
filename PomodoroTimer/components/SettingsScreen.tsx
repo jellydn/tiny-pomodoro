@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { useSettings } from '../contexts/SettingsContext';
-import { canDisableSound, canDisableVibration } from '../utils/settingsState';
 import { SoundPicker } from './SoundPicker';
 
 interface SettingsScreenProps {
@@ -11,8 +10,10 @@ interface SettingsScreenProps {
 export function SettingsScreen({ onBack }: SettingsScreenProps) {
   const { soundEnabled, vibrationEnabled, setSoundEnabled, setVibrationEnabled } = useSettings();
 
-  const soundSwitchDisabled = !canDisableSound({ vibrationEnabled });
-  const vibrationSwitchDisabled = !canDisableVibration({ soundEnabled });
+  // A switch is disabled when flipping it off would leave both notification
+  // methods off — the same at-least-one rule reduceSettings enforces.
+  const soundSwitchDisabled = !vibrationEnabled;
+  const vibrationSwitchDisabled = !soundEnabled;
 
   return (
     <View style={styles.container}>
