@@ -1,13 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  DEFAULT_SETTINGS,
+  SETTINGS_STORAGE_KEY,
+  parseStoredSettings,
+  reduceSettings,
+  type SettingsState,
+} from '../utils/settingsState';
 
 export { AVAILABLE_SOUNDS, type SoundOption } from '../utils/sound';
-
-interface SettingsState {
-  soundEnabled: boolean;
-  vibrationEnabled: boolean;
-  selectedSoundId: string;
-}
 
 interface SettingsContextType extends SettingsState {
   setSoundEnabled: (enabled: boolean) => void;
@@ -16,81 +17,58 @@ interface SettingsContextType extends SettingsState {
   isLoading: boolean;
 }
 
-const SETTINGS_STORAGE_KEY = '@pomodoro_settings';
-
-const DEFAULT_SETTINGS: SettingsState = {
-  soundEnabled: true,
-  vibrationEnabled: true,
-  selectedSoundId: 'bell',
-};
-
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [soundEnabled, setSoundEnabledState] = useState(DEFAULT_SETTINGS.soundEnabled);
-  const [vibrationEnabled, setVibrationEnabledState] = useState(DEFAULT_SETTINGS.vibrationEnabled);
-  const [selectedSoundId, setSelectedSoundIdState] = useState(DEFAULT_SETTINGS.selectedSoundId);
+  const [settings, dispatch] = useReducer(reduceSettings, DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load persisted settings once on mount. A stored payload is just another
+  // patch over the defaults; the reducer's guard also normalizes a corrupt
+  // payload that disabled both toggles. Fields are validated at this boundary
+  // so a malformed payload can't smuggle wrong-typed values into state.
   useEffect(() => {
-    loadSettings();
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (stored) {
+          dispatch(parseStoredSettings(JSON.parse(stored)));
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
-  const loadSettings = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (stored) {
-        const settings: SettingsState = JSON.parse(stored);
-        setSoundEnabledState(settings.soundEnabled);
-        setVibrationEnabledState(settings.vibrationEnabled);
-        if (settings.selectedSoundId) {
-          setSelectedSoundIdState(settings.selectedSoundId);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load settings:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const saveSettings = async (settings: SettingsState) => {
-    try {
-      await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-    } catch (error) {
+  // Persistence is a side effect of settings state, not of each setter: one
+  // writer instead of three hand-rolled saveSettings calls that captured
+  // stale closures. Skipped while loading so defaults never clobber stored
+  // values.
+  useEffect(() => {
+    if (isLoading) return;
+    AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings)).catch((error) => {
       console.error('Failed to save settings:', error);
-    }
-  };
+    });
+  }, [settings, isLoading]);
 
   const setSoundEnabled = useCallback((enabled: boolean) => {
-    // Prevent both being disabled
-    if (!enabled && !vibrationEnabled) {
-      return;
-    }
-    setSoundEnabledState(enabled);
-    saveSettings({ soundEnabled: enabled, vibrationEnabled, selectedSoundId });
-  }, [vibrationEnabled, selectedSoundId]);
+    dispatch({ soundEnabled: enabled });
+  }, []);
 
   const setVibrationEnabled = useCallback((enabled: boolean) => {
-    // Prevent both being disabled
-    if (!enabled && !soundEnabled) {
-      return;
-    }
-    setVibrationEnabledState(enabled);
-    saveSettings({ soundEnabled, vibrationEnabled: enabled, selectedSoundId });
-  }, [soundEnabled, selectedSoundId]);
+    dispatch({ vibrationEnabled: enabled });
+  }, []);
 
   const setSelectedSoundId = useCallback((soundId: string) => {
-    setSelectedSoundIdState(soundId);
-    saveSettings({ soundEnabled, vibrationEnabled, selectedSoundId: soundId });
-  }, [soundEnabled, vibrationEnabled]);
+    dispatch({ selectedSoundId: soundId });
+  }, []);
 
   return (
     <SettingsContext.Provider
       value={{
-        soundEnabled,
-        vibrationEnabled,
-        selectedSoundId,
+        ...settings,
         setSoundEnabled,
         setVibrationEnabled,
         setSelectedSoundId,
