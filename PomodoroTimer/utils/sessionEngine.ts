@@ -4,6 +4,11 @@
 // the Android widget task handler drive one engine instead of hand-writing
 // start/pause/stop/reset in two places. It has no I/O and no React imports —
 // side effects (persistence, notifications, widget sync) live in the callers.
+// The wall-clock math it needs is shared with the persistence contract via
+// timerState.computeRemaining, so the engine and the storage layer derive
+// remaining time from one formula.
+
+import { computeRemaining } from './timerState';
 
 export interface SessionState {
   duration: number;
@@ -86,8 +91,9 @@ export function reduceSession(state: SessionState, action: SessionAction): Sessi
 
     case 'reconcile': {
       if (!state.isRunning || !state.endTimestamp) return state;
-      const remaining = Math.max(0, Math.ceil((state.endTimestamp - action.now) / 1000));
-      if (remaining <= 0) {
+      // Delegate wall-clock reconciliation to the shared formula.
+      const computed = computeRemaining(state, action.now);
+      if (computed.isCompleted) {
         return {
           ...state,
           remaining: 0,
@@ -97,7 +103,7 @@ export function reduceSession(state: SessionState, action: SessionAction): Sessi
           endTimestamp: null,
         };
       }
-      return { ...state, remaining };
+      return { ...state, remaining: computed.remaining };
     }
   }
 }
