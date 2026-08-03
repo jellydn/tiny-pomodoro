@@ -26,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'Tiny Pomodoro',
     slug: 'tiny-pomodoro',
-    version: '1.0.0',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -39,12 +39,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.pomodorotimer.app',
+      buildNumber: '2',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {
       package: 'com.pomodorotimer.app',
+      versionCode: 2,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
