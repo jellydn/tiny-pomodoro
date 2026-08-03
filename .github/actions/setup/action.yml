@@ -1,0 +1,31 @@
+name: Setup build environment
+description: Checkout, install Node/Bun and dependencies, and install the EAS CLI. Shared by all build workflows.
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        # Composite actions cannot use `working-directory`, so cd explicitly.
+        cd PomodoroTimer
+        bun install
+
+    - name: Setup EAS CLI
+      shell: bash
+      run: |
+        cd PomodoroTimer
+        bun add -g eas-cli

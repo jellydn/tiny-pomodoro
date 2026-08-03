@@ -14,71 +14,45 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: PomodoroTimer
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Setup EAS CLI
-        run: bun add -g eas-cli
+      - name: Setup build environment
+        uses: ./.github/actions/setup
 
       - name: Extract version from tag
         id: version
         run: |
           if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "VERSION=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
           else
-            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build Android Release APK
         id: build
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        working-directory: PomodoroTimer
         run: |
           # preview profile builds a standalone release APK (buildType: apk).
           # The --json output lets us capture the exact build ID so we can
           # download THIS build, not whatever build:list happens to return.
           npx eas-cli build --platform android --profile preview --non-interactive --wait --json > build-result.json
           BUILD_ID=$(jq -r '.id // empty' build-result.json)
-          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "Built with ID: $BUILD_ID"
 
       - name: Download APK from EAS
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          if [ -n "${{ steps.build.outputs.BUILD_ID }}" ]; then
-            BUILD_URL=$(npx eas-cli build:view "${{ steps.build.outputs.BUILD_ID }}" --json 2>/dev/null | jq -r '.artifacts.buildUrl // empty')
-          fi
-          if [ -z "$BUILD_URL" ]; then
-            # Fallback: most recent finished preview build for Android.
-            BUILD_URL=$(npx eas-cli build:list --platform android --profile preview --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl // empty')
-          fi
-          if [ -z "$BUILD_URL" ]; then
-            echo "::error::Could not resolve EAS artifact URL"
-            exit 1
-          fi
-          curl -L -o PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk "$BUILD_URL"
+        uses: ./.github/actions/eas-download
+        with:
+          platform: android
+          profile: preview
+          build_id: ${{ steps.build.outputs.BUILD_ID }}
+          output_file: PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk
+          expo_token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: PomodoroTimer/PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk

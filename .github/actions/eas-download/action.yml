@@ -1,0 +1,44 @@
+name: Download EAS artifact
+description: Resolve the artifact URL for a completed EAS build and download it. Uses the exact build ID when available, falling back to the most recent finished build for the platform/profile.
+
+inputs:
+  platform:
+    description: Build platform (android | ios)
+    required: true
+  profile:
+    description: EAS build profile used for the fallback lookup
+    required: true
+  build_id:
+    description: EAS build ID from the build step
+    required: false
+    default: ''
+  output_file:
+    description: Local filename to write the artifact to
+    required: true
+  expo_token:
+    description: EAS access token (EXPO_TOKEN secret from the calling workflow)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Download artifact from EAS
+      shell: bash
+      env:
+        EXPO_TOKEN: ${{ inputs.expo_token }}
+      run: |
+        # Composite actions cannot use `working-directory`, so cd explicitly.
+        cd PomodoroTimer
+        BUILD_URL=""
+        if [ -n "${{ inputs.build_id }}" ]; then
+          BUILD_URL=$(npx eas-cli build:view "${{ inputs.build_id }}" --json 2>/dev/null | jq -r '.artifacts.buildUrl // empty')
+        fi
+        if [ -z "$BUILD_URL" ]; then
+          # Fallback: most recent finished build for this platform/profile.
+          BUILD_URL=$(npx eas-cli build:list --platform "${{ inputs.platform }}" --profile "${{ inputs.profile }}" --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl // empty')
+        fi
+        if [ -z "$BUILD_URL" ]; then
+          echo "::error::Could not resolve EAS artifact URL"
+          exit 1
+        fi
+        curl -L -o "${{ inputs.output_file }}" "$BUILD_URL"
