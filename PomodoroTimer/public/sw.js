@@ -99,7 +99,7 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => cached);
-      return cached || refresh;
+      return cached || refresh.then((response) => response ?? Response.error());
     }),
   );
 });
