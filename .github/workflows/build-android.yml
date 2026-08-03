@@ -11,6 +11,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,11 +44,12 @@ jobs:
           # preview profile builds a standalone release APK (buildType: apk).
           # The --json output lets us capture the exact build ID so we can
           # download THIS build, not whatever build:list happens to return.
-          # eas-cli is installed globally by the setup action (bun add -g
-          # eas-cli) and resolved via PATH. npx would NOT find it (npx does
-          # not scan PATH for globally-installed bins) and would re-download
-          # it from the registry instead.
-          eas-cli build --platform android --profile preview --non-interactive --wait --json > build-result.json
+          # The eas-cli package exposes a single binary named `eas` (verified:
+          # bin: { eas: bin/run }). It is installed globally by the setup
+          # action and resolved via PATH. Invoking `eas` directly avoids npx,
+          # which neither scans PATH for global bins nor has a bin matching
+          # the package name, and would re-download the CLI from the registry.
+          eas build --platform android --profile preview --non-interactive --wait --json > build-result.json
           BUILD_ID=$(jq -r '.id // empty' build-result.json)
           echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "Built with ID: $BUILD_ID"
