@@ -4,8 +4,9 @@
 // transition through a single reducer — mirroring sessionEngine.ts. It has no
 // I/O and no React imports; persistence (AsyncStorage) lives in the caller as
 // an effect. The at-least-one-toggle rule (a finished session must never go
-// completely silent) is enforced here so the UI and the reducer share one
-// guard instead of two hand-copied copies.
+// completely silent) is enforced by the reducer; the Settings screen mirrors
+// it with a trivial derivation so a disabled switch and a rejected patch can
+// never disagree.
 
 export const SETTINGS_STORAGE_KEY = '@pomodoro_settings';
 
