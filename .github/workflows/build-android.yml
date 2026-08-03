@@ -63,6 +63,49 @@ jobs:
       - name: Copy APK with version name
         run: cp android/app/build/outputs/apk/release/app-release.apk PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk
 
+      - name: Validate APK (aapt badging, apksigner, zipalign)
+        run: |
+          set -euo pipefail
+          APK="PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk"
+          test -f "$APK" || { echo "FAIL: APK not found: $APK"; exit 1; }
+
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          echo "Using build-tools: $BT"
+
+          echo "--- aapt dump badging ---"
+          "$BT/aapt" dump badging "$APK" > /tmp/badging.txt
+          PACKAGE=$(grep -oP "package: name='\K[^']+" /tmp/badging.txt | head -1)
+          VERSION_CODE=$(grep -oP "versionCode='\K[0-9]+" /tmp/badging.txt | head -1)
+          VERSION_NAME=$(grep -oP "versionName='\K[^']+" /tmp/badging.txt | head -1)
+          echo "package=$PACKAGE versionCode=$VERSION_CODE versionName=$VERSION_NAME"
+
+          [ "$PACKAGE" = "com.pomodorotimer.app" ] || { echo "FAIL: unexpected package $PACKAGE"; exit 1; }
+          [ -n "$VERSION_CODE" ] && [ "$VERSION_CODE" -ge 1 ] || { echo "FAIL: bad versionCode '$VERSION_CODE'"; exit 1; }
+          grep -q "launchable-activity" /tmp/badging.txt || { echo "FAIL: no launchable activity in badging"; exit 1; }
+
+          # On tag pushes, the tag IS the version — internal versionName must match it.
+          if [ "${{ github.event_name }}" = "push" ]; then
+            [ "$VERSION_NAME" = "${{ steps.version.outputs.VERSION }}" ] || { echo "FAIL: versionName $VERSION_NAME != tag version ${{ steps.version.outputs.VERSION }}"; exit 1; }
+            echo "PASS: badging OK (versionName matches tag)"
+          else
+            echo "PASS: badging OK (manual run, skipping tag-version match)"
+          fi
+
+          echo "--- apksigner verify ---"
+          "$BT/apksigner" verify --verbose --print-certs "$APK" > /tmp/apksigner.txt
+          cat /tmp/apksigner.txt
+          grep -q "Verifies" /tmp/apksigner.txt || { echo "FAIL: apksigner did not verify the APK"; exit 1; }
+          echo "PASS: signature OK"
+
+          echo "--- zipalign check ---"
+          if ! "$BT/zipalign" -c -v 4 "$APK" > /tmp/zipalign.txt; then
+            echo "FAIL: zipalign verification failed"; tail -2 /tmp/zipalign.txt; exit 1
+          fi
+          tail -1 /tmp/zipalign.txt
+          echo "PASS: alignment OK"
+
+          echo "APK validation passed: $APK ($PACKAGE $VERSION_NAME, code $VERSION_CODE)"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
