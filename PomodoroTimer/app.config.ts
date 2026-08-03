@@ -2,6 +2,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const plugins: ExpoConfig['plugins'] = [
+    './plugins/android-signing/withAndroidSigning',
     './plugins/ios-widget/withIOSWidget',
   ];
 
@@ -26,7 +27,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'Tiny Pomodoro',
     slug: 'tiny-pomodoro',
-    version: '1.0.0',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -39,12 +40,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.pomodorotimer.app',
+      buildNumber: '2',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
     },
     android: {
       package: 'com.pomodorotimer.app',
+      versionCode: 2,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
@@ -52,8 +55,27 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
     },
+    experiments: {
+      // GitHub Pages serves this app from /tiny-pomodoro/. Keep local exports
+      // root-relative unless a deployment explicitly supplies a base path.
+      baseUrl: process.env.EXPO_BASE_URL ?? '',
+    },
     web: {
       favicon: './assets/favicon.png',
+      // PWA installability metadata. The app shell (manifest.json, icons,
+      // service worker) ships from public/ — these fields drive the HTML
+      // template (title, theme-color, description) and keep the config in
+      // sync with public/manifest.json.
+      name: 'Tiny Pomodoro',
+      shortName: 'Pomodoro',
+      description: 'A minimalist Pomodoro timer with sounds, vibration, and home screen widgets.',
+      lang: 'en',
+      themeColor: '#007AFF',
+      backgroundColor: '#ffffff',
+      display: 'standalone',
+      orientation: 'portrait',
+      startUrl: '.',
+      scope: '.',
     },
     extra: {
       eas: {

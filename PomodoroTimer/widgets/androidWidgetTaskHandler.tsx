@@ -7,7 +7,7 @@ import {
   type PersistedTimerState,
 } from '../utils/timerStorage';
 import { DEFAULT_DURATION } from '../utils/timerState';
-import { createSession, reduceSession, type SessionState } from '../utils/sessionEngine';
+import { createSession, hydrateSession, reduceSession, type SessionState } from '../utils/sessionEngine';
 
 export async function runWidgetTaskHandler(
   props: WidgetTaskHandlerProps
@@ -18,25 +18,13 @@ export async function runWidgetTaskHandler(
     return;
   }
 
-  let durationSeconds = DEFAULT_DURATION;
   const storedState = await loadTimerState();
-
-  if (storedState) {
-    durationSeconds = storedState.duration ?? DEFAULT_DURATION;
-  }
 
   // Rehydrate from the persisted contract and reconcile against wall-clock time
   // using the same engine the app drives.
   let session: SessionState = storedState
-    ? {
-        duration: storedState.duration ?? DEFAULT_DURATION,
-        remaining: storedState.remaining,
-        isRunning: storedState.isRunning,
-        isPaused: storedState.isPaused,
-        isCompleted: storedState.isCompleted,
-        endTimestamp: storedState.endTimestamp,
-      }
-    : createSession(durationSeconds);
+    ? hydrateSession(storedState)
+    : createSession(DEFAULT_DURATION);
 
   session = reduceSession(session, { type: 'reconcile', now: Date.now() });
 

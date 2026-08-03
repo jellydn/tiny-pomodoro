@@ -1,5 +1,8 @@
 name: Build Android APK
 
+permissions:
+  contents: write
+
 on:
   push:
     tags:
@@ -32,11 +35,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Install dependencies
         run: bun install
-
-      - name: Setup EAS CLI
-        run: bun add -g eas-cli
 
       - name: Extract version from tag
         id: version
@@ -47,18 +53,83 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build Android APK
+      - name: Generate native project
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          npx eas-cli build --platform android --profile development --non-interactive --wait
+          # Tag releases must ship with the production keystore. Fail fast if
+          # any signing input is missing so we never publish a debug-signed APK.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            for v in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+              [ -n "${!v:-}" ] || { echo "FAIL: tag release requires $v"; exit 1; }
+            done
+          fi
+          npx expo prebuild --platform android --no-install
 
-      - name: Download APK from EAS
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Build release APK
+        working-directory: PomodoroTimer/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Copy APK with version name
+        run: cp android/app/build/outputs/apk/release/app-release.apk PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk
+
+      - name: Validate APK (aapt badging, apksigner, zipalign)
         run: |
-          BUILD_URL=$(npx eas-cli build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
-          curl -L -o PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk "$BUILD_URL"
+          set -euo pipefail
+          APK="PomodoroTimer-${{ steps.version.outputs.VERSION }}.apk"
+          test -f "$APK" || { echo "FAIL: APK not found: $APK"; exit 1; }
+
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          echo "Using build-tools: $BT"
+
+          echo "--- aapt dump badging ---"
+          "$BT/aapt" dump badging "$APK" > /tmp/badging.txt
+          PACKAGE=$(grep -oP "package: name='\K[^']+" /tmp/badging.txt | head -1)
+          VERSION_CODE=$(grep -oP "versionCode='\K[0-9]+" /tmp/badging.txt | head -1)
+          VERSION_NAME=$(grep -oP "versionName='\K[^']+" /tmp/badging.txt | head -1)
+          echo "package=$PACKAGE versionCode=$VERSION_CODE versionName=$VERSION_NAME"
+
+          [ "$PACKAGE" = "com.pomodorotimer.app" ] || { echo "FAIL: unexpected package $PACKAGE"; exit 1; }
+          [ -n "$VERSION_CODE" ] && [ "$VERSION_CODE" -ge 1 ] || { echo "FAIL: bad versionCode '$VERSION_CODE'"; exit 1; }
+          grep -q "launchable-activity" /tmp/badging.txt || { echo "FAIL: no launchable activity in badging"; exit 1; }
+
+          # On tag pushes, the tag IS the version — internal versionName must match it.
+          if [ "${{ github.event_name }}" = "push" ]; then
+            [ "$VERSION_NAME" = "${{ steps.version.outputs.VERSION }}" ] || { echo "FAIL: versionName $VERSION_NAME != tag version ${{ steps.version.outputs.VERSION }}"; exit 1; }
+            echo "PASS: badging OK (versionName matches tag)"
+          else
+            echo "PASS: badging OK (manual run, skipping tag-version match)"
+          fi
+
+          echo "--- apksigner verify ---"
+          "$BT/apksigner" verify --verbose --print-certs "$APK" > /tmp/apksigner.txt
+          cat /tmp/apksigner.txt
+          grep -q "Verifies" /tmp/apksigner.txt || { echo "FAIL: apksigner did not verify the APK"; exit 1; }
+          echo "PASS: signature OK"
+
+          # On tag releases, assert the APK carries the production certificate.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            EXPECTED_CERT="${{ vars.ANDROID_RELEASE_CERT_SHA256 }}"
+            if [ -z "$EXPECTED_CERT" ]; then
+              echo "FAIL: ANDROID_RELEASE_CERT_SHA256 repo variable not set"; exit 1
+            fi
+            if ! grep -qi "$EXPECTED_CERT" /tmp/apksigner.txt; then
+              echo "FAIL: APK not signed with the production certificate (expected $EXPECTED_CERT)"; exit 1
+            fi
+            echo "PASS: signed with production certificate"
+          fi
+
+          echo "--- zipalign check ---"
+          if ! "$BT/zipalign" -c -v 4 "$APK" > /tmp/zipalign.txt; then
+            echo "FAIL: zipalign verification failed"; tail -2 /tmp/zipalign.txt; exit 1
+          fi
+          tail -1 /tmp/zipalign.txt
+          echo "PASS: alignment OK"
+
+          echo "APK validation passed: $APK ($PACKAGE $VERSION_NAME, code $VERSION_CODE)"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
